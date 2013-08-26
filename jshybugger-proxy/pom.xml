@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
+ 
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+ 
+     http://www.apache.org/licenses/LICENSE-2.0
+ 
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+ -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.jshybugger</groupId>
+		<artifactId>jshybugger-parent</artifactId>
+		<version>${global.version}</version>
+		<relativePath>../</relativePath>
+	</parent>
+
+	<artifactId>jshybugger-proxy</artifactId>
+	<packaging>apk</packaging>
+	<name>jsHybugger - Debugger Proxy</name>
+
+	<properties>
+		<environment>development</environment>
+		<versionCode>14</versionCode>
+	</properties>
+
+	<profiles>
+		<profile>
+			<id>maven</id>
+			<activation>
+				<property>
+					<name>!m2e.version</name>
+				</property>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.jshybugger</groupId>
+					<artifactId>jshybugger-lib</artifactId>
+					<version>${project.version}</version>
+				</dependency>
+			</dependencies>
+		</profile>
+		<profile>
+			<id>eclipse</id>
+			<activation>
+				<property>
+					<name>m2e.version</name>
+				</property>
+			</activation>
+			<dependencies>
+				<dependency>
+					<groupId>org.jshybugger</groupId>
+					<artifactId>jshybugger-lib</artifactId>
+					<version>${project.version}</version>
+					<exclusions>
+						<exclusion>
+							<groupId>com.google.android</groupId>
+							<artifactId>android</artifactId>
+						</exclusion>
+					</exclusions>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+
+	<build>
+		<finalName>jshybuggerce-proxy-${global.version}</finalName>
+		<plugins>
+
+			<plugin>
+				<groupId>com.jayway.maven.plugins.android.generation2</groupId>
+				<artifactId>android-maven-plugin</artifactId>
+				<extensions>true</extensions>
+				<configuration>
+					<manifest>
+						<versionName>${global.version}</versionName>
+						<versionCode>${versionCode}</versionCode>
+					</manifest>
+					<proguard>
+						<skip>false</skip>
+					</proguard>
+					<sign>
+						<debug>false</debug>
+					</sign>
+					<zipalign>
+						<!-- <verbose>true</verbose> -->
+						<skip>false</skip>
+					</zipalign>
+
+				</configuration>
+				<executions>
+					<execution>
+						<id>manifestUpdate</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>manifest-update</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>alignApk</id>
+						<phase>package</phase>
+						<goals>
+							<goal>zipalign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jarsigner-plugin</artifactId>
+				<version>1.2</version>
+				<executions>
+					<execution>
+						<id>signing</id>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+						<phase>package</phase>
+						<inherited>true</inherited>
+						<configuration>
+							<archiveDirectory />
+							<includes>
+								<include>target/jshybugger-proxy-${global.version}.apk</include>
+							</includes>
+							<keystore>${project.basedir}/keystore</keystore>
+							<alias>jshybugger</alias>
+							<storepass>jshybugger</storepass>
+							<keypass>jshybugger</keypass>
+							<storetype>JKS</storetype>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+
+
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.apache.maven.plugins
+										</groupId>
+										<artifactId>
+											maven-dependency-plugin
+										</artifactId>
+										<versionRange>
+											[2.1,)
+										</versionRange>
+										<goals>
+											<goal>unpack</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+	</build>
+	<dependencies>
+		<dependency>
+			<groupId>org.jshybugger</groupId>
+			<artifactId>jshybugger-lib</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+	</dependencies>
+</project>
