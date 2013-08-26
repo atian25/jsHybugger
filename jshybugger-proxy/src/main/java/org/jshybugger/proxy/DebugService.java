@@ -77,7 +77,7 @@ public class DebugService extends Service {
 			debugSession = new ProxyDebugSession(this);
 			browserInterface = new JSDInterface();
 			
-			debugServer.addHandler("/jshybugger/.*", new JSHybuggerResourceHandler(getApplicationContext(), browserInterface));
+			debugServer.addHandler("/jshybugger/.*", new JSHybuggerResourceHandler(browserInterface));
 			debugSession.setBrowserInterface(browserInterface);
 			
 			debugServer.exportSession(debugSession);

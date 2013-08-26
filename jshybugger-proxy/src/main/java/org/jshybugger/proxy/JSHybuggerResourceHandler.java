@@ -17,11 +17,9 @@ import android.util.Log;
 class JSHybuggerResourceHandler implements HttpHandler {
 
 	private final JSDInterface browserInterface;
-	private final Context context;
 	
-	JSHybuggerResourceHandler(Context context, JSDInterface browserInterface) {
+	JSHybuggerResourceHandler(JSDInterface browserInterface) {
 		this.browserInterface = browserInterface;
-		this.context = context;
 	}
 
 	@Override
