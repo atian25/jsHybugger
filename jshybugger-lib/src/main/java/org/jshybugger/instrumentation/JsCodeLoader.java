@@ -92,7 +92,7 @@ public class JsCodeLoader {
 							}
 							
 							parseExceptions.add(e);
-						} catch (IOException e) {
+						} catch (Exception e) {
 							parseExceptions.add(e);
 						} finally {
 							startSignal.countDown();

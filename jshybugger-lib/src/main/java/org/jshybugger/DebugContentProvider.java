@@ -29,6 +29,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -210,22 +211,17 @@ public class DebugContentProvider extends ContentProvider {
 					// return instrumented js code
 					return ParcelFileDescriptor.open(outFile, ParcelFileDescriptor.MODE_READ_ONLY);
 
-				} catch (EvaluatorException e) {
-			        Log.d(TAG, "parsing failure while instrumenting file: " + e.getMessage());
-
-			        // delete file - maybe partially instrumented file.
-					outFile.delete();
-					
-					String writeConsole = "console.error('" + e.getMessage().replace("'", "\"") + "')";
-					return createParcel(new InputResource(false, false, new BufferedInputStream( new ByteArrayInputStream(writeConsole.getBytes()))));
-					
 				} catch (Exception e) {
 			        Log.d(TAG, "instrumentation failed, delivering original file: " + uri, e);
 
 			        // delete file - maybe partially instrumented file.
 					outFile.delete();
-
-					return createParcel(openInputFile(url));
+					
+					cacheFile = writeNotIntrumentedCacheFile(e, searchCacheFile(url));
+					return ParcelFileDescriptor.open(cacheFile, ParcelFileDescriptor.MODE_READ_ONLY);
+					
+//					String writeConsole = "console.error('" + e.getMessage().replace("'", "\"") + "')";
+//					return createParcel(new InputResource(false, false, new BufferedInputStream( new ByteArrayInputStream(writeConsole.getBytes()))));
 					
 				} finally {
 					resource.getInputStream().close();
@@ -268,6 +264,35 @@ public class DebugContentProvider extends ContentProvider {
 		resource.inputStream.reset();
 	}
 
+	private File writeNotIntrumentedCacheFile(Exception ex, File cacheFile) throws IOException {
+		
+		File inputFile = new File(cacheFile.getAbsolutePath() + ".tmp");
+		cacheFile.renameTo(inputFile);
+		
+		BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(inputFile));
+		
+		// now write original content
+		BufferedOutputStream fout = new BufferedOutputStream(new FileOutputStream(new File(cacheFile.getAbsolutePath())));
+		byte buffer[] = new byte[8096];
+		int len;
+		
+		fout.write("/*\r\n jsHybugger instrumentation failed, file is not debuggable!\r\n".getBytes());
+		fout.write(" Reason: ".getBytes());
+		fout.write(ex.toString().getBytes());
+		fout.write("\r\n\r\n".getBytes());
+		ex.printStackTrace(new PrintStream(fout));
+		fout.write("\r\n */\r\n".getBytes());
+		
+		while ((len=inputStream.read(buffer))>0) {
+			fout.write(buffer, 0, len);
+		}
+		fout.close();
+		inputStream.close();
+		inputFile.delete();
+		
+		return cacheFile;
+	}
+	
 	private File getInstrumentedCacheFile(File resource) {
 		return resource.getAbsolutePath().endsWith(INSTRUMENTED_FILE_APPENDIX)
 				? resource 
@@ -368,14 +393,15 @@ public class DebugContentProvider extends ContentProvider {
         			new BufferedInputStream(new FileInputStream(url)));
         	
         } else if (url.indexOf(":") < 0) {  // Must be a local file
-        	try {
-        		// first: search file in assests folder
-        		return new InputResource(
-        			url.endsWith(".js"),
-        			url.endsWith(".html"), 
-        			new BufferedInputStream(getContext().getAssets().open(url,AssetManager.ACCESS_STREAMING)));
+        	
+			try {
+				// first: search file in assests folder
+				return new InputResource(
+						url.endsWith(".js"),
+						url.endsWith(".html"), 
+						new BufferedInputStream(getContext().getAssets().open(url,AssetManager.ACCESS_STREAMING)));
         		
-        	} catch (FileNotFoundException fex) {
+         	} catch (FileNotFoundException fex) {
         		// second: search directly
         		File f = new File(url);
         		if (!f.exists()) {
@@ -388,6 +414,7 @@ public class DebugContentProvider extends ContentProvider {
         			url.endsWith(".html"), 
         			new BufferedInputStream(new FileInputStream(f)));
         	}
+        	
         } else { // loading network resource
         	URL urlRes = new URL(url);
         	HttpURLConnection urlConnection = (HttpURLConnection) urlRes.openConnection();
