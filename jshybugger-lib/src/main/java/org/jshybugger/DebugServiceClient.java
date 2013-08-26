@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,7 +123,7 @@ public class DebugServiceClient {
 		}	
 		
 		try {
-			// register the content:// protcol as local schema to fix Cross-Origin security problems
+			// register the content:// protocol as local schema to fix Cross-Origin security problems
 			try {
 				Method method = webView.getClass().getMethod("getWebViewProvider");
 			    if (method != null) {

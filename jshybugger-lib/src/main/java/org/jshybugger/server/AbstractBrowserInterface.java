@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ public abstract class AbstractBrowserInterface implements BrowserInterface {
 		try {
 			JSONObject msg = new JSONObject(data);
 			debugSession.sendMessage(path, msg);
-			
+
 		} catch (JSONException e) {
 			Log.e(TAG, "sendToServer failed for path: " + path, e);
 		}
@@ -148,7 +148,9 @@ public abstract class AbstractBrowserInterface implements BrowserInterface {
 		ReplyReceiver rec = replyReceivers.get(replyId);
 		if (rec != null) {
 			try {
-				rec.onReply(new JSONObject(data));
+				if (data != null) {
+					rec.onReply(new JSONObject(data));
+				}
 			} catch (JSONException e) {
 				Log.e(TAG, "replyToServer failed for replyId: " + replyId, e);
 			}
@@ -161,6 +163,7 @@ public abstract class AbstractBrowserInterface implements BrowserInterface {
 	 *
 	 * @param wait true will block the call till new data is available
 	 * @return the queued message
+	 * @throws InterruptedException the interrupted exception
 	 */
 	@JavascriptInterface
 	public String getQueuedMessage(boolean wait) {

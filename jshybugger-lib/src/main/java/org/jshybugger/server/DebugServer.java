@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import org.webbitserver.HttpResponse;
 import org.webbitserver.WebServer;
 import org.webbitserver.WebServers;
 
+import android.util.Log;
+
 
 /**
  * The DebugServer is the heart of the whole system. 
@@ -36,22 +38,24 @@ import org.webbitserver.WebServers;
  */
 public class DebugServer {
 
+	private static final String TAG = "DebugServer";
 	private static final String CHROME_DEVTOOLS_FRONTEND = "https://chrome-devtools-frontend.appspot.com/static/30.0.1549.0/devtools.html?ws=%s/devtools/page/%s";
+	private static final String VERSION = "2.0.0_EAP";
+	
 	private WebServer webServer;
-	private DomainSocketServer domainSocketServer;
 	
 	private CountDownLatch debugServerStarted = new CountDownLatch(1);
 	private List<DebugSession> debugSessions  = new ArrayList<DebugSession>();
 	
 	/**
 	 * Instantiates a new debug server.
-	 *
 	 * @param debugPort the tcp listen port number
-	 * @param domainSocketName name of domain socket
+	 * @param context application context
+	 * @param productName product identifier
 	 * @param application the application context
 	 * @throws IOException 
 	 */
-	public DebugServer(final int debugPort, final String domainSocketName) throws IOException {
+	public DebugServer(final int debugPort) throws IOException {
 		
 		Thread webServerThread = new Thread(new Runnable() {
 
@@ -59,77 +63,105 @@ public class DebugServer {
 			public void run() {
 				
 				webServer = WebServers.createWebServer( debugPort)
-	                .add("/", new HttpHandler() {
-	
-	                    @Override
-	                    public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
-	                        response.status(301).header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-	                        if (!debugSessions.isEmpty()) {
-	                        	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.get(0).getSessionId()));
-	                        }
-	                        response.end();
-	                    }
-	                })
-	                .add("/json/version", new HttpHandler() {
-	                    @Override
-	                    public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
-	                    	try {
-								String res = new JSONStringer().object()
-										.key("Browser").value("jsHybugger 1.2.0")
-										.key("Protocol-Version").value("1.0")
-									 .endObject().toString();
-								
-								response.header("Content-type", "application/json")
-									.content(res)
-									.end();
-								
-							} catch (JSONException e) {
-								e.printStackTrace();
-							}
-	                    }
-	                })
-	                .add("/json", new HttpHandler() {
-	                    @Override
-	                    public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
-	                    	try {
-	                    		String host = request.header("Host");
-								JSONStringer res = new JSONStringer().array();
-								
-								for (DebugSession dbgSession : debugSessions) {
-									
-									res.object()
-										.key("devtoolsFrontendUrl").value(String.format(CHROME_DEVTOOLS_FRONTEND, host != null ? host : "//" , "1"))
-										.key("faviconUrl").value("http://www.jshybugger.org/favicon.ico")
-									    .key("thumbnailUrl").value("/thumb/")
-									    .key("title").value("jsHybugger powered debugging")
-									    .key("url").value("content://jsHybugger.org/")
-									    .key("webSocketDebuggerUrl").value("ws://" + (host != null ? host : "") + "/devtools/page/" + dbgSession.getSessionId())
-   								    .endObject();
-								}
-								
-								res.endArray();
-								
-								response.header("Content-type", "application/json")
-									.content(res.toString())
-									.end();
-								
-							} catch (JSONException e) {
-								e.printStackTrace();
-							}
-	                    }
-	                });
-				
+	                .add("/", getRootHandler())
+	                .add("/json/version", getVersionHandler())
+	                .add("/json", getJsonHandler());
+		
+		        webServer.connectionExceptionHandler(new Thread.UncaughtExceptionHandler() {
+					@Override
+					public void uncaughtException(Thread t, Throwable e) {
+						Log.e(TAG, "Debug server terminated unexpected", e);
+					}
+				});
+				Log.i(TAG, "starting debug server on port: " + debugPort);
 		        webServer.start();
+		        
 		        debugServerStarted.countDown();
 			}
+
 		});
 		
-		domainSocketServer = new DomainSocketServer(domainSocketName, debugPort);
-
 		webServerThread.start();
-		domainSocketServer.start();
+		webServerThread.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+			@Override
+			public void uncaughtException(Thread t, Throwable e) {
+				Log.e(TAG, "Bootstraping debug server terminated unexpected", e);
+			}
+		});
 	}
 
+	private HttpHandler getRootHandler() {
+		return new HttpHandler() {
+			
+            @Override
+            public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
+                response.status(301).header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+                    if (!debugSessions.isEmpty()) {
+                    	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.get(0).getSessionId()));
+                    }
+                response.end();
+            }
+        };		
+	}
+	
+	private HttpHandler getJsonHandler() {
+		return new HttpHandler() {
+		    @Override
+		    public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
+		    	try {
+		    		String host = request.header("Host");
+					JSONStringer res = new JSONStringer().array();
+					
+					for (DebugSession dbgSession : debugSessions) {
+						
+						res.object()
+							.key("id").value(dbgSession.getSessionId())
+							.key("devtoolsFrontendUrl").value(String.format(CHROME_DEVTOOLS_FRONTEND, host != null ? host : "//" , "1"))
+							.key("faviconUrl").value("http://www.jshybugger.org/favicon.ico")
+						    .key("thumbnailUrl").value("/thumb/")
+						    .key("url").value("content://jsHybugger.org/");
+						
+						if (!dbgSession.isConnected()) {
+							res.key("webSocketDebuggerUrl").value("ws://" + (host != null ? host : "") + "/devtools/page/" + dbgSession.getSessionId());
+						}
+						res.key("title").value("jsHybugger powered debugging");
+					    res.endObject();
+					}
+					
+					res.endArray();
+					
+					response.header("Content-type", "application/json")
+						.content(res.toString())
+						.end();
+					
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+		    }
+		};
+	}
+
+	private HttpHandler getVersionHandler() {
+		return new HttpHandler() {
+		    @Override
+		    public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
+		    	try {
+					String res = new JSONStringer().object()
+							.key("Browser").value("jsHybugger " +VERSION)
+							.key("Protocol-Version").value("1.0")
+						 .endObject().toString();
+					
+					response.header("Content-type", "application/json")
+						.content(res)
+						.end();
+					
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+		    }
+		};
+	}
+		  
 	public void exportSession(DebugSession debugSession) throws InterruptedException {
 		debugServerStarted.await();
 		webServer.add("/devtools/page/" + debugSession.getSessionId(), debugSession);
@@ -144,9 +176,6 @@ public class DebugServer {
 	public void stop() {
 		if (webServer != null) {
 			webServer.stop();
-		}
-		if (domainSocketServer != null) {
-			domainSocketServer.stopSocketServer();
 		}
 	}
 }

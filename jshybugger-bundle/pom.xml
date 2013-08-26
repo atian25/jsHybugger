@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+  Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@
     <parent>
         <groupId>org.jshybugger</groupId>
         <artifactId>jshybugger-parent</artifactId>
-		<version>1.2.2</version>
+		<version>${global.version}</version>
+		<relativePath>../</relativePath>
     </parent>
 	
     <artifactId>jshybugger-bundle</artifactId>
@@ -34,33 +35,68 @@
 			<artifactId>jshybugger-lib</artifactId>
 			<version>${project.version}</version>
 		</dependency>	
-    </dependencies>
+		<dependency>
+			<groupId>org.mozilla</groupId>
+			<artifactId>rhino</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.webbitserver</groupId>
+			<artifactId>webbit</artifactId>
+		</dependency>		
+	 </dependencies>
 	
 	<build>
 
 		<plugins>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<version>2.4</version>
-				<configuration>
-					<appendAssemblyId>false</appendAssemblyId>
-					<classifier>bundle</classifier>
-					<finalName>${project.build.finalName}_bundle</finalName>
-					<descriptors>
-						<descriptor>assembly.xml</descriptor>
-					</descriptors>
-				</configuration>
-				<executions>
-					<execution>
-						<id>bundled</id>
-						<phase>package</phase>
-						<goals>
-							<goal>single</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 
+			<plugin>
+				<groupId>com.pyx4me</groupId>
+				<artifactId>proguard-maven-plugin</artifactId>
+				<executions>
+				   <execution>
+					   <phase>package</phase>
+					   <goals><goal>proguard</goal></goals>
+				   </execution>
+				</executions>
+				<configuration>
+					<obfuscate>true</obfuscate>
+					 <assembly>
+						<inclusions>
+							<inclusion>
+								<groupId>org.jshybugger</groupId>
+								<artifactId>jshybugger-lib</artifactId>
+							</inclusion>
+							<inclusion>
+								<groupId>org.mozilla</groupId>
+								<artifactId>rhino</artifactId>
+								<filter>!org/mozilla/javascript/tools/**,!org/mozilla/javascript/xml/impl/xmlbeans/**</filter>
+							</inclusion>
+							<inclusion>
+								<groupId>org.webbitserver</groupId>
+								<artifactId>webbit</artifactId>
+							</inclusion>
+							<inclusion>
+								<groupId>io.netty</groupId>
+								<artifactId>netty</artifactId>
+							</inclusion>
+						</inclusions>
+					</assembly>
+					<outjar>${project.build.finalName}.jar</outjar>
+					<outputDirectory>${project.build.directory}</outputDirectory>
+					<options>
+						<option>-verbose</option>
+						<option>-ignorewarnings</option>
+						<option>-dontoptimize</option>
+						<option>-allowaccessmodification</option>
+						<option>-keep public class org.jshybugger.DebugService	{ public *; }</option>
+						<option>-keep public class org.jshybugger.DebugContentProvider	{ public *; }</option>
+						<option>-keep public class org.jshybugger.DebugServiceClient	{ public *; }</option>
+						<option>-keep public class org.jshybugger.server.AbstractBrowserInterface { public *; }</option>
+						<option>-keep public class org.mozilla.javascript.Token*	{ *; }</option>
+					</options>
+				</configuration>
+			</plugin>		
 		</plugins>				
+		
 	</build>
 </project>

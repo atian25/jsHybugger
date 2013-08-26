@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ public class DebugSession extends BaseWebSocketHandler {
 
 	private final String sessionId;
 	
+	private boolean connected;
 	
 	/**
 	 * Instantiates a new debug server.
@@ -83,18 +84,7 @@ public class DebugSession extends BaseWebSocketHandler {
 		msgHandler = new PageMsgHandler(this);
 		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
 
-		msgHandler = new DOMStorageMsgHandler(this);
-		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-
-		msgHandler = new DatabaseMsgHandler(this);
-		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-		
-		//msgHandler = new DOMMsgHandler(this);
-		//HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-
-		//msgHandler = new CssMsgHandler(this);
-		//HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-		sessionId = UUID.randomUUID().toString();
+		sessionId = UUID.randomUUID().toString().toUpperCase();
 	}
 	
 	public void setBrowserInterface(BrowserInterface browserInterface) {
@@ -102,6 +92,15 @@ public class DebugSession extends BaseWebSocketHandler {
 		this.browserInterface = browserInterface;
 	}	
 	
+	/**
+	 * Checks if session is connected.
+	 *
+	 * @return true, if is connected
+	 */
+	public boolean isConnected() {
+		return connected;
+	}
+
 	/**
 	 * Gets the browser interface.
 	 *
@@ -116,15 +115,21 @@ public class DebugSession extends BaseWebSocketHandler {
 	 */
 	@Override
 	public void onOpen( final WebSocketConnection conn ) {
-		System.out.println( conn.httpRequest().remoteAddress() + " entered the debugger space!" );
+		if (getBrowserInterface() == null) {
+			Log.e(TAG, "Connection request rejected, no available WebView for debugging!");
+			conn.close();
+			return;
+		}
+		connected=true;
+		
+		Log.d(TAG, conn.httpRequest().remoteAddress() + " entered the debugger space!" );
 		connections.add(conn);
 
 		try {
-			getBrowserInterface().sendMsgToWebView(
-					"ClientConnected",
-					new JSONObject(),
-					null);
-			
+				getBrowserInterface().sendMsgToWebView(
+						"ClientConnected",
+						new JSONObject(),
+						null);
 		} catch (JSONException e) {
 			Log.e(TAG, "Notify ClientConnected failed", e);
 		}		
@@ -136,8 +141,9 @@ public class DebugSession extends BaseWebSocketHandler {
 	 */
 	@Override
 	public void onClose( WebSocketConnection conn) {
-		System.out.println( conn + " has left the debugger space!" );
+		Log.d(TAG, conn + " has left the debugger space!" );
 		connections.remove(conn);
+		connected=false;
 	}
 
 	/* (non-Javadoc)
@@ -158,7 +164,10 @@ public class DebugSession extends BaseWebSocketHandler {
 				conn.send(
 						new JSONStringer().object()
 					.key("id").value(message.getInt("id"))
-					.key("result").object().key("result").value(false).endObject()
+					.key("error").object()
+							.key("message").value(message.getString("method") + " not supported")
+							.key("code").value(-32000)
+							.endObject()
 					.endObject().toString());
 			}
 		} catch (JSONException e) {
@@ -241,8 +250,6 @@ public class DebugSession extends BaseWebSocketHandler {
 			}
 			cursor.close();
 		}
-		
-		Log.d(TAG, "loadScriptResourceById - length: " + (resourceContent != null ? resourceContent.length() : 0));
 		
 		return resourceContent;
 	}

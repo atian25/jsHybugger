@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import java.util.HashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.json.JSONStringer;
 import org.webbitserver.WebSocketConnection;
 
 
@@ -59,119 +58,9 @@ public class RuntimeMsgHandler extends AbstractMsgHandler {
 			
 			
 			conn.send(reply.toString());
-			
-		} else if (method.equals("releaseObjectGroup")) {
-			
-			releaseObjectGroup(conn, message);
-			
-		} else if (method.equals("getProperties")) {
-			
-			getProperties(conn, message);
 
-		} else if (method.equals("evaluate")) {
-			
-			evaluate(conn, message);
-
-		} else if (method.equals("callFunctionOn")) {
-
-			callFunctionOn(conn, message);
-			
 		} else {
 			super.onReceiveMessage(conn, method, message);
 		}
-	}
-
-	private void releaseObjectGroup(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"releaseObjectGroup",
-				new JSONObject().put("params", message.getJSONObject("params")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").value(data.getJSONObject("result"))
-						.endObject().toString());
-				}
-		});		
-	}
-
-	private void callFunctionOn(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"callFunctionOn",
-				new JSONObject().put("params", message.getJSONObject("params")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").value(data.getJSONObject("result"))
-						.endObject().toString());
-				}
-		});		
-		
-	}
-
-	/**
-	 * Process "Runtime.getProperties" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void getProperties(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-		JSONObject params = message.getJSONObject("params");
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"getProperties",
-				new JSONObject().put("objectId", params.getString("objectId"))
-					.put("ownProperties", params.getString("ownProperties")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").object()
-							.key("result").value(data.getJSONArray("result"))
-						.endObject().endObject().toString());
-				}
-		});		
-	}
-
-	/**
-	 * Process "Runtime.evaluate" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void evaluate(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-		JSONObject params = message.getJSONObject("params");
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"evaluate",
-				new JSONObject().put("params", params),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").object()
-							.key("result").value(data)
-						.endObject().endObject().toString());
-				}
-		});		
 	}
 }

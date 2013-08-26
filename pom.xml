@@ -20,7 +20,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.jshybugger</groupId>
 	<artifactId>jshybugger-parent</artifactId>
-	<version>1.2.2</version>
+	<version>${global.version}</version>
 	<packaging>pom</packaging>
 	<name>jsHybugger - Parent</name>
 
@@ -28,11 +28,13 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>	
         <platform.version>17</platform.version>
 		<server_schema>http</server_schema>
+		<global.version>2.0.0</global.version>
 	</properties>
 
 	<modules>
 		<module>jshybugger-lib</module>
 		<module>jshybugger-bundle</module>
+		<module>jshybugger-proxy</module>
 		<module>examples</module>
 	</modules>
 

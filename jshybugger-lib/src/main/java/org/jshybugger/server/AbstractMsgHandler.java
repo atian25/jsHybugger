@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,11 +67,14 @@ abstract public class AbstractMsgHandler implements MessageHandler {
 	 */
 	@Override
 	public void onReceiveMessage(WebSocketConnection conn, String method, JSONObject message) throws JSONException {
+		dispatchToBrowserAndReply(conn, method, message);
+		/*
 		conn.send(
 				new JSONStringer().object()
 			.key("id").value(message.getInt("id"))
 			.key("result").object().key("result").value(false).endObject()
 			.endObject().toString());
+			*/
 	}
 
 	/* (non-Javadoc)
@@ -157,7 +160,7 @@ abstract public class AbstractMsgHandler implements MessageHandler {
 	protected void dispatchToBrowserAndReply(final WebSocketConnection conn, final String method, final JSONObject message, final boolean confirm) throws JSONException {
 		
 		debugSession.getBrowserInterface().sendMsgToWebView(
-				method,
+				OBJECT_NAME + "." + method,
 				message.has("params") ? new JSONObject().put("params", message.getJSONObject("params")) : new JSONObject(),
 				new ReplyReceiver() {
 
@@ -174,6 +177,25 @@ abstract public class AbstractMsgHandler implements MessageHandler {
 				}
 			}
 		});
+	}
+
+	/**
+	 * Send result back to debug client.
+	 * @param conn socket connection
+	 * @param string message class i.e. "Page.reload"
+	 * @param message message connect
+	 * @throws JSONException some JSON exception
+	 */
+	protected void sendResultMessage(WebSocketConnection conn, String messageClass,
+			JSONObject message) throws JSONException {
+
+		if (conn != null) {
+			conn.send(new JSONStringer().object()
+					.key("method").value(messageClass)
+					.key("params").value(message)
+				.endObject()
+			.toString());
+		}				
 	}
 	
 }

@@ -1,0 +1,6 @@
+{
+  "undef": true,
+  "unused": true,
+  "globals": { "JsHybuggerNI": false, "console":false, "Runtime":false, "CSS":false, "DOM":false, "Page":false, "Debugger":false, "Database":false, "Storage":false, "DOMStorage" : false },
+  "browser" : true
+}

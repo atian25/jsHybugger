@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,6 @@ import org.json.JSONObject;
 import org.json.JSONStringer;
 import org.webbitserver.WebSocketConnection;
 
-import android.content.ContentValues;
-import android.net.Uri;
 import android.util.Log;
 
 
@@ -109,8 +107,7 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 			
 		} else if ("continueToLocation".equals(method)) {
 			
-			JSONObject location = message.getJSONObject("params").getJSONObject("location");
-			continueToLocation(conn, message.getInt("id"), location.getString("scriptId"), location.getInt("lineNumber"));
+			dispatchToBrowserAndReply(conn, method, message);
 
 		} else if ("setBreakpointByUrl".equals(method)) {
 			
@@ -126,29 +123,12 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 			
 			removeBreakpoint(conn, message);
 			
-		} else if (method.equals("setPauseOnExceptions")) {
+		} else if (method.equals("resume") ||
+				method.equals("stepOver")||
+				method.equals("stepOut")||
+				method.equals("stepInto")) {
 			
-			setPauseOnExceptions(conn, message);
-			
-		} else if (method.equals("evaluateOnCallFrame")) {
-			
-			evaluateOnCallFrame(conn, message);
-			
-		} else if (method.equals("resume")) {
-			sendDebuggerMsgToWebView(conn, "breakpoint-resume", message);
-			
-		} else if (method.equals("stepOver")) {
-			sendDebuggerMsgToWebView(conn, "breakpoint-step-over", message);
-			
-		} else if (method.equals("stepOut")) {
-			sendDebuggerMsgToWebView(conn, "breakpoint-step-out", message);
-			
-		} else if (method.equals("stepInto")) {
-			sendDebuggerMsgToWebView(conn, "breakpoint-step-into", message);
-			
-		} else if (method.equals("setBreakpointsActive")) {
-			
-			setBreakpointsActive(conn, message);
+			sendDebuggerMsgToWebView(conn, HANDLER_NAME + "." + method, message);
 			
 		} else {
 			super.onReceiveMessage(conn, method, message);
@@ -166,113 +146,14 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 	private void setScriptSource(final WebSocketConnection conn,
 			final JSONObject message)  throws JSONException {
 		
-		ContentValues values = new ContentValues();
-		values.put("scriptSource", message.getJSONObject("params").getString("scriptSource"));
-		
-		Uri uri = Uri.parse(this.debugSession.PROVIDER_PROTOCOL + message.getJSONObject("params").getString("scriptId"));
-		
-		try {
-			debugSession.application.getContentResolver().update(uri, values, null, null);
-			DebuggerMsgHandler.this.sendAckMessage(conn, message);
-		} catch (RuntimeException rex) {
-			
-			conn.send(new JSONStringer().object()
-					.key("id").value(message.getInt("id"))
-					.key("error").object()
-						.key("code").value(-32000)
-						.key("message").value(rex.getMessage())
-						.endObject()
-					.endObject().toString());
-		}
-		/*
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"setPauseOnExceptions",
-				new JSONObject().put("params", message.getJSONObject("params")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				DebuggerMsgHandler.this.sendAckMessage(conn, message);
-			}
-		});*/				
+		conn.send(new JSONStringer().object()
+				.key("id").value(message.getInt("id"))
+				.key("error").object()
+					.key("code").value(-32000)
+					.key("message").value("saving changes not implemented")
+					.endObject()
+				.endObject().toString());
 	}	
-
-	/**
-	 * Process "Debugger.setPauseOnExceptions" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void setPauseOnExceptions(final WebSocketConnection conn,
-			final JSONObject message)  throws JSONException {
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"setPauseOnExceptions",
-				new JSONObject().put("params", message.getJSONObject("params")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				DebuggerMsgHandler.this.sendAckMessage(conn, message);
-			}
-		});				
-	}
-
-	/**
-	 * Process "Debugger.setBreakpointsActive" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void setBreakpointsActive(final WebSocketConnection conn,
-			final JSONObject message) throws JSONException {
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"setBreakpointsActive",
-				new JSONObject().put("params", message.getJSONObject("params")),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				DebuggerMsgHandler.this.sendAckMessage(conn, message);
-			}
-		});				
-	}
-
-	/**
-	 * Process "Debugger.continueToLocation" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void continueToLocation(final WebSocketConnection conn, final int id, final String url, final int lineNumber) throws JSONException {
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"continue-to",
-				new JSONObject().put("url", url).put(
-						"lineNumber", lineNumber),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				JSONStringer res = new JSONStringer().object()
-						.key("id").value(id)
-						.key("result").object().endObject().endObject();
-				
-				
-				conn.send(res.toString());
-			}
-		});		
-	}
 
 	private void sendDebuggerMsgToWebView(final WebSocketConnection conn,
 			final String command, final JSONObject message) throws JSONException {
@@ -287,34 +168,6 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 						.key("method").value("Debugger.resumed").endObject().toString());
 			}
 		});
-	}
-	
-	/**
-	 * Process "Debugger.evaluateOnCallFrame" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void evaluateOnCallFrame(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-		JSONObject params = message.getJSONObject("params");
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"evaluateOnCallFrame",
-				new JSONObject().put("params", params),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").object()
-							.key("result").value(data)
-						.endObject().endObject().toString());
-				}
-		});		
 	}
 	
 	/* (non-Javadoc)
@@ -396,8 +249,8 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 		}
 		
 		debugSession.getBrowserInterface().sendMsgToWebView(
-				"breakpoint-remove",
-				new JSONObject().put("breakpointId", params.getString("breakpointId")),
+				"Debugger.removeBreakpoint",
+				new JSONObject().put("params", params),
 				new ReplyReceiver() {
 
 			@Override
@@ -421,14 +274,19 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 		final Breakpoint breakpoint = new Breakpoint(url, lineNumber, condition);
 		Log.d(TAG, "setBreakpointByUrl: " + breakpoint);
 
+		JSONObject params = new JSONObject();
+		params.put("condition", condition);
+		params.put("lineNumber", lineNumber);
+		params.put("url", url);
+		
 		debugSession.getBrowserInterface().sendMsgToWebView(
-				"breakpoint-set",
-				new JSONObject().put("url", url).put(
-						"lineNumber", lineNumber).put("condition", condition),
+				"Debugger.setBreakpointByUrl",
+				new JSONObject().put("params", params),
 				new ReplyReceiver() {
 
 			@Override
 			public void onReply(JSONObject data) throws JSONException {
+				
 				
 				// add breakpoint to internal list of breakpoints
 				Set<Breakpoint> breakpoints = scriptBreakpoints.get(url);
@@ -496,10 +354,14 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 		if (breakpoints != null) {
 			if (conn != null) {
 				for (Breakpoint breakpoint : breakpoints) {
+					JSONObject params = new JSONObject();
+					params.put("condition", breakpoint.condition);
+					params.put("lineNumber", breakpoint.line);
+					params.put("url", url);
+					
 					debugSession.getBrowserInterface().sendMsgToWebView(
-							"breakpoint-set",
-							new JSONObject().put("url", url).put("lineNumber",
-									breakpoint.line).put("condition", breakpoint.condition), null);
+							"Debugger.setBreakpointByUrl",
+							new JSONObject().put("params", params), null);
 					
 					Log.d(TAG, "breakpointResolved: " + breakpoint);
 

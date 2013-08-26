@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,13 +63,9 @@ public class PageMsgHandler extends AbstractMsgHandler {
 		} else if ("enable".equals(method)) {
 			
 			debugSession.getBrowserInterface().sendMsgToWebView(
-					"breakpoint-resume",
+					"Debugger.resume",
 					new JSONObject(), null);
 			
-		} else if ("getResourceTree".equals(method)) {
-
-			getResourceTree(conn, message);
-
 		} else if ("getResourceContent".equals(method)) {
 
 			getResourceContent(conn, message);
@@ -95,65 +91,18 @@ public class PageMsgHandler extends AbstractMsgHandler {
 			final JSONObject message) throws JSONException {
 		
 		final String url = message.getJSONObject("params").getString("url");
-		if (url.startsWith("data:")) {
-			
+		try {
 			conn.send(new JSONStringer().object()
-					.key("id").value(message.getInt("id"))
-					.key("result").value(new JSONObject()
-						.put("content", url.substring(url.indexOf(",")+1))
-						.put("base64Encoded", url.substring(url.indexOf(";")+1).startsWith("base64")))
-					.endObject().toString());
-			
-		} else {
-			debugSession.getBrowserInterface().sendMsgToWebView(
-					"getResourceContent",
-					new JSONObject().put("params",message.getJSONObject("params")),
-					new ReplyReceiver() {
-	
-				@Override
-				public void onReply(JSONObject data) throws JSONException {
-					
-					try {
-						conn.send(new JSONStringer().object()
-								.key("id").value(message.getInt("id"))
-								.key("result").value(new JSONObject()
-									.put("content", debugSession.loadScriptResourceById(url, data.getBoolean("base64Encoded") ))
-									.put("base64Encoded", data.getBoolean("base64Encoded")))
-								.endObject().toString());
-						
-					} catch (IOException e) {
-						throw new JSONException(e.getMessage());
-					}
-				}
-			});		
+				.key("id").value(message.getInt("id"))
+				.key("result").value(new JSONObject()
+					.put("content", debugSession.loadScriptResourceById(url, false ))
+					.put("base64Encoded", false))
+				.endObject().toString());
+				
+		} catch (IOException e) {
+			throw new JSONException(e.getMessage());
 		}
 	}
-	
-	/**
-	 * Process "Page.getResourceTree" protocol messages.
-	 * Forwards the message to the WebView and returns the result to the debugger frontend. 
-	 *
-	 * @param conn the websocket connection
-	 * @param message the JSON message
-	 * @throws JSONException some JSON exception
-	 */
-	private void getResourceTree(final WebSocketConnection conn, final JSONObject message) throws JSONException {
-		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"getResourceTree",
-				null,
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				conn.send(new JSONStringer().object()
-						.key("id").value(message.getInt("id"))
-						.key("result").value(data)
-						.endObject().toString());
-				}
-		});		
-	}	
 	
 	/**
 	 * Process "Page.reload" protocol messages.
@@ -166,7 +115,7 @@ public class PageMsgHandler extends AbstractMsgHandler {
 	private void pageReload(final WebSocketConnection conn, final JSONObject message) throws JSONException {
 
 		debugSession.getBrowserInterface().sendMsgToWebView(
-				"page-reload",
+				"Page.pageReload",
 				new JSONObject().put("params", message.getJSONObject("params")),
 				new ReplyReceiver() {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,6 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Messenger;
@@ -146,6 +145,16 @@ public class DebugContentProvider extends ContentProvider {
 		InputResource resource = null;
 		
 		try {
+			// is this a request for the jsHybugger script
+			if (url.endsWith("jshybugger.js")) {
+				ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
+				
+				new TransferThread(JsHybugger.getSource(), new AutoCloseOutputStream(
+						pipe[1]), false).start();
+				
+				return pipe[0];
+			}  
+				
 			// get original source
 			File cacheFile = searchCacheFile(url);
 			// if the file exists in the "changed" cache - then return the file - and stop further checks/processing 
@@ -191,15 +200,7 @@ public class DebugContentProvider extends ContentProvider {
 			}
 			
 			
-			if (url.endsWith("jshybugger.js")) {
-				ParcelFileDescriptor[] pipe = ParcelFileDescriptor.createPipe();
-				
-				new TransferThread(resource.getInputStream(), new AutoCloseOutputStream(
-						pipe[1]), false).start();
-				
-				return pipe[0];
-				
-			} else if (resource.isJs() && !excludePattern.matcher(url).find()) {
+			if (resource.isJs() && !excludePattern.matcher(url).find()) {
 
 				// instrument js code
 				File outFile = getInstrumentedCacheFile(cacheFile);
@@ -349,21 +350,7 @@ public class DebugContentProvider extends ContentProvider {
 	 */
 	private InputResource openInputFile(String url) throws IOException {
 
-		if (url.endsWith("jshybugger.js")) {
-			
-        	InputStream resourceAsStream = null;
-        	try {
-        		// try to search jshybugger.js in assets  folder if not found -> search classpath
-        		resourceAsStream = getContext().getAssets().open("jshybugger.js");
-        	} catch (FileNotFoundException fex) {
-        		resourceAsStream = getClass().getResourceAsStream("/jshybugger.js");
-        	}
-			return new InputResource(
-        			false,  // don't mark it as js resource, because we don't want instrumentation for this file 
-        			false, 
-        			new BufferedInputStream(resourceAsStream));
-        	
-		} else if (url.startsWith(ANDROID_ASSET_URL)) {   // Must be a local file
+		if (url.startsWith(ANDROID_ASSET_URL)) {   // Must be a local file
         	url = url.substring(ANDROID_ASSET_URL.length());
 
         	return new InputResource(
@@ -381,12 +368,26 @@ public class DebugContentProvider extends ContentProvider {
         			new BufferedInputStream(new FileInputStream(url)));
         	
         } else if (url.indexOf(":") < 0) {  // Must be a local file
-        	
-        	return new InputResource(
+        	try {
+        		// first: search file in assests folder
+        		return new InputResource(
         			url.endsWith(".js"),
         			url.endsWith(".html"), 
         			new BufferedInputStream(getContext().getAssets().open(url,AssetManager.ACCESS_STREAMING)));
-        	
+        		
+        	} catch (FileNotFoundException fex) {
+        		// second: search directly
+        		File f = new File(url);
+        		if (!f.exists()) {
+            		// third: search from root file system (prepend trailing slash)
+        			f = new File("/" + url);
+        		}
+        		
+        		return new InputResource(
+        			url.endsWith(".js"),
+        			url.endsWith(".html"), 
+        			new BufferedInputStream(new FileInputStream(f)));
+        	}
         } else { // loading network resource
         	URL urlRes = new URL(url);
         	HttpURLConnection urlConnection = (HttpURLConnection) urlRes.openConnection();

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Wolfgang Flohr-Hochbichler (developer@jshybugger.org)
+ * Copyright 2013 Wolfgang Flohr-Hochbichler (wflohr@jshybugger.org)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.List;
 import org.jshybugger.server.DebugServer;
 import org.jshybugger.server.DebugSession;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.Service;
 import android.content.ComponentName;
@@ -73,8 +74,13 @@ public class DebugService extends Service {
 	@Override
 	public void onCreate() {
 		try {
+		    int res = getApplicationContext().checkCallingOrSelfPermission(Manifest.permission.INTERNET);
+		    if (res != PackageManager.PERMISSION_GRANTED) {
+		    	Log.e(TAG, "Missing android.permission.INTERNET permission");
+		    	android.os.Process.killProcess(android.os.Process.myPid());
+		    }
+		    
 			int debugPort = 8888;
-			String domainSocketName = "jsHybugger.";
 			
 			ServiceInfo info = getApplicationContext().getPackageManager().getServiceInfo(new ComponentName(getApplicationContext(), DebugService.class), PackageManager.GET_SERVICES|PackageManager.GET_META_DATA);
 			Bundle metaData = info.metaData;
@@ -82,10 +88,9 @@ public class DebugService extends Service {
 				if (metaData.getInt("debugPort", 0) > 0) {
 					debugPort = metaData.getInt("debugPort");
 				} 
-				domainSocketName = metaData.getString("domainSocketName") + "."; // fix because GUI truncates last character
 			}			
 			
-			DebugServer debugServer = new DebugServer( debugPort, domainSocketName );
+			DebugServer debugServer = new DebugServer( debugPort );
 			debugSession = new DebugSession(this);
 			
 			debugServer.exportSession(debugSession);
@@ -166,9 +171,11 @@ public class DebugService extends Service {
 		browserInterface.setActivity(activity);
 		browserInterface.setWebView(webView);
 		
-		debugSession.setBrowserInterface(browserInterface);
+		if (debugSession != null) {
+			debugSession.setBrowserInterface(browserInterface);
 		
-		notifyHandlers(Message.obtain(null, MSG_WEBVIEW_ATTACHED));
+			notifyHandlers(Message.obtain(null, MSG_WEBVIEW_ATTACHED));
+		}
 	}
 	
     /**
