@@ -23,28 +23,20 @@
         <artifactId>jshybugger-parent</artifactId>
 		<version>${global.version}</version>
 		<relativePath>../</relativePath>
-    </parent>
-	
-    <artifactId>jshybugger-bundle</artifactId>
-	<packaging>pom</packaging>
-    <name>jsHybugger - bundle library</name>
+	</parent>
 
-    <dependencies>
+	<artifactId>jshybugger-bundle</artifactId>
+	<packaging>jar</packaging>
+	<name>jsHybugger - bundle library</name>
+
+	<dependencies>
 		<dependency>
 			<groupId>org.jshybugger</groupId>
 			<artifactId>jshybugger-lib</artifactId>
 			<version>${project.version}</version>
-		</dependency>	
-		<dependency>
-			<groupId>org.mozilla</groupId>
-			<artifactId>rhino</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.webbitserver</groupId>
-			<artifactId>webbit</artifactId>
-		</dependency>		
-	 </dependencies>
-	
+	</dependencies>
+
 	<build>
 
 		<plugins>
@@ -53,14 +45,16 @@
 				<groupId>com.pyx4me</groupId>
 				<artifactId>proguard-maven-plugin</artifactId>
 				<executions>
-				   <execution>
-					   <phase>package</phase>
-					   <goals><goal>proguard</goal></goals>
-				   </execution>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>proguard</goal>
+						</goals>
+					</execution>
 				</executions>
 				<configuration>
 					<obfuscate>true</obfuscate>
-					 <assembly>
+					<assembly>
 						<inclusions>
 							<inclusion>
 								<groupId>org.jshybugger</groupId>
@@ -83,20 +77,10 @@
 					</assembly>
 					<outjar>${project.build.finalName}.jar</outjar>
 					<outputDirectory>${project.build.directory}</outputDirectory>
-					<options>
-						<option>-verbose</option>
-						<option>-ignorewarnings</option>
-						<option>-dontoptimize</option>
-						<option>-allowaccessmodification</option>
-						<option>-keep public class org.jshybugger.DebugService	{ public *; }</option>
-						<option>-keep public class org.jshybugger.DebugContentProvider	{ public *; }</option>
-						<option>-keep public class org.jshybugger.DebugServiceClient	{ public *; }</option>
-						<option>-keep public class org.jshybugger.server.AbstractBrowserInterface { public *; }</option>
-						<option>-keep public class org.mozilla.javascript.Token*	{ *; }</option>
-					</options>
+					<proguardInclude>proguard.cfg</proguardInclude>
 				</configuration>
-			</plugin>		
-		</plugins>				
-		
+			</plugin>
+		</plugins>
+
 	</build>
 </project>

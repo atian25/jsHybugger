@@ -220,9 +220,6 @@ public class DebugContentProvider extends ContentProvider {
 					cacheFile = writeNotIntrumentedCacheFile(e, searchCacheFile(url));
 					return ParcelFileDescriptor.open(cacheFile, ParcelFileDescriptor.MODE_READ_ONLY);
 					
-//					String writeConsole = "console.error('" + e.getMessage().replace("'", "\"") + "')";
-//					return createParcel(new InputResource(false, false, new BufferedInputStream( new ByteArrayInputStream(writeConsole.getBytes()))));
-					
 				} finally {
 					resource.getInputStream().close();
 				}
@@ -565,7 +562,8 @@ public class DebugContentProvider extends ContentProvider {
 			        Log.d(TAG, "parsing failure while instrumenting file: " + e.getMessage());
 
 			        // delete file - maybe partially instrumented file.
-			        //outFile.delete();
+					outFile.delete();
+					writeNotIntrumentedCacheFile(e, cacheFile);
 			        
 					String writeConsole = e.getMessage();
 					throw new RuntimeException(writeConsole);
@@ -573,7 +571,8 @@ public class DebugContentProvider extends ContentProvider {
 			        Log.d(TAG, "instrumentation failed: " + uri, e);
 
 			        // delete file - maybe partially instrumented file.
-			        //outFile.delete();
+					outFile.delete();
+					writeNotIntrumentedCacheFile(e, cacheFile);
 			        
 					throw new RuntimeException("instrumentation failed: " + uri, e);
 					
