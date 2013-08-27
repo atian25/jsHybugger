@@ -60,8 +60,6 @@ public class DebugSession extends BaseWebSocketHandler {
 
 	private final String sessionId;
 	
-	private boolean connected;
-	
 	/**
 	 * Instantiates a new debug server.
 	 *
@@ -98,7 +96,7 @@ public class DebugSession extends BaseWebSocketHandler {
 	 * @return true, if is connected
 	 */
 	public boolean isConnected() {
-		return connected;
+		return !connections.isEmpty();
 	}
 
 	/**
@@ -120,7 +118,11 @@ public class DebugSession extends BaseWebSocketHandler {
 			conn.close();
 			return;
 		}
-		connected=true;
+		if (isConnected()) {
+			Log.e(TAG, "Connection request rejected, active debug session found!");
+			conn.close();
+			return;
+		}
 		
 		Log.d(TAG, conn.httpRequest().remoteAddress() + " entered the debugger space!" );
 		connections.add(conn);
@@ -143,7 +145,6 @@ public class DebugSession extends BaseWebSocketHandler {
 	public void onClose( WebSocketConnection conn) {
 		Log.d(TAG, conn + " has left the debugger space!" );
 		connections.remove(conn);
-		connected=false;
 	}
 
 	/* (non-Javadoc)
