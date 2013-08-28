@@ -204,6 +204,7 @@ public class DebugServer {
 
 	public void unExportSession(DebugSession debugSession) {
 		debugSessions.remove(debugSession.getSessionId());
+		debugSession.stop();
 	}
 
 	public DebugSession getDebugSession(String id) {
