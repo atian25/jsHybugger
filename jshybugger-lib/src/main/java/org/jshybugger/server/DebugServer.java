@@ -16,8 +16,9 @@
 package org.jshybugger.server;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.InputStream;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 
 import org.json.JSONException;
@@ -40,12 +41,13 @@ public class DebugServer {
 
 	private static final String TAG = "DebugServer";
 	private static final String CHROME_DEVTOOLS_FRONTEND = "https://chrome-devtools-frontend.appspot.com/static/30.0.1549.0/devtools.html?ws=%s/devtools/page/%s";
-	private static final String VERSION = "2.0.0_EAP";
+	private static final String VERSION = "2.0.0";
 	
 	private WebServer webServer;
 	
 	private CountDownLatch debugServerStarted = new CountDownLatch(1);
-	private List<DebugSession> debugSessions  = new ArrayList<DebugSession>();
+	private DebugSessionsWebSocketHandler debugSessionsHandler;
+	private ConcurrentMap<String,DebugSession> debugSessions  = new ConcurrentHashMap<String, DebugSession>();
 	
 	/**
 	 * Instantiates a new debug server.
@@ -62,10 +64,12 @@ public class DebugServer {
 			@Override
 			public void run() {
 				
+				debugSessionsHandler = new DebugSessionsWebSocketHandler(DebugServer.this);
 				webServer = WebServers.createWebServer( debugPort)
 	                .add("/", getRootHandler())
 	                .add("/json/version", getVersionHandler())
-	                .add("/json", getJsonHandler());
+	                .add("/json", getJsonHandler())
+	                .add("/devtools/page/.*", debugSessionsHandler);
 		
 		        webServer.connectionExceptionHandler(new Thread.UncaughtExceptionHandler() {
 					@Override
@@ -96,9 +100,40 @@ public class DebugServer {
             @Override
             public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
                 response.status(301).header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-                    if (!debugSessions.isEmpty()) {
-                    	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.get(0).getSessionId()));
-                    }
+                if (debugSessions.size() == 1) {
+                	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.get(0).getSessionId()));
+                } else if (debugSessions.size() > 1) {
+					InputStream is = null;
+					try {
+						byte[] overview = null;
+						is = this.getClass().getResourceAsStream("/overview.html.txt");
+						while(is.available() > 0) {
+							byte[] bytes = new byte[is.available()];
+							is.read(bytes);
+							if (overview == null) overview = bytes;
+							else {
+								byte[] newBytes = new byte[overview.length + bytes.length];
+								System.arraycopy(overview, 0, newBytes, 0, overview.length);
+								System.arraycopy(bytes, 0, newBytes, overview.length, bytes.length);
+								overview = newBytes;
+							}
+						}
+						response.content(overview);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					finally {
+						if(is != null)
+							try {
+								is.close();
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+					}
+				} else {    					
+					response.content("No session for debugging available.");
+                }
+                    
                 response.end();
             }
         };		
@@ -112,19 +147,19 @@ public class DebugServer {
 		    		String host = request.header("Host");
 					JSONStringer res = new JSONStringer().array();
 					
-					for (DebugSession dbgSession : debugSessions) {
+					for (DebugSession dbgSession : debugSessions.values()) {
 						
 						res.object()
 							.key("id").value(dbgSession.getSessionId())
-							.key("devtoolsFrontendUrl").value(String.format(CHROME_DEVTOOLS_FRONTEND, host != null ? host : "//" , "1"))
+							.key("devtoolsFrontendUrl").value(String.format(CHROME_DEVTOOLS_FRONTEND, host != null ? host : "//" , dbgSession.getSessionId()))
 							.key("faviconUrl").value("http://www.jshybugger.org/favicon.ico")
-						    .key("thumbnailUrl").value("/thumb/")
-						    .key("url").value("content://jsHybugger.org/");
+						    .key("thumbnailUrl").value("http://www.jshybugger.org/favicon.ico")
+						    .key("url").value(dbgSession.getUrl());
 						
 						if (!dbgSession.isConnected()) {
 							res.key("webSocketDebuggerUrl").value("ws://" + (host != null ? host : "") + "/devtools/page/" + dbgSession.getSessionId());
 						}
-						res.key("title").value("jsHybugger powered debugging");
+						res.key("title").value(dbgSession.getTitle());
 					    res.endObject();
 					}
 					
@@ -164,10 +199,22 @@ public class DebugServer {
 		  
 	public void exportSession(DebugSession debugSession) throws InterruptedException {
 		debugServerStarted.await();
-		webServer.add("/devtools/page/" + debugSession.getSessionId(), debugSession);
-		debugSessions.add(debugSession);
+		debugSessions.put(debugSession.getSessionId(),debugSession);
 	}
-	
+
+	public void unExportSession(DebugSession debugSession) {
+		debugSessions.remove(debugSession.getSessionId());
+	}
+
+	public DebugSession getDebugSession(String id) {
+		return debugSessions.get(id);
+	}
+
+	public DebugSession[] getDebugSessions() {
+		return debugSessions.values().toArray(
+				new DebugSession[debugSessions.size()]);
+	}		 
+		 
 	public void addHandler(String path, HttpHandler handler) throws InterruptedException {
 		debugServerStarted.await();
 		webServer.add(path, handler);

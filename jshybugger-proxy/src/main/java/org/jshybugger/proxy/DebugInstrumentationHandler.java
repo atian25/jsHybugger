@@ -18,7 +18,6 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jshybugger.DebugContentProvider;
 import org.jshybugger.server.Md5Checksum;
-import org.mozilla.javascript.EvaluatorException;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;

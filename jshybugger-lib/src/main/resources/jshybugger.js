@@ -42,6 +42,7 @@ window.JsHybugger = (function() {
 		FRAME_ID = String(new Date().getTime() % 3600000),
 		PROTOCOL = 'content://jsHybugger.org/',
 		localConsole = {},
+		clientConnected=false,
 		url = JsHybuggerConfig.endpoint;
 	
 	/**
@@ -67,60 +68,71 @@ window.JsHybugger = (function() {
 			}
 		};
 		
-		openPushChannel();
-	}
-
-	/**
-	 * Opens channel to the server a listen for notifications. 
-	 */
-    function openPushChannel() {
-
-		var pushChannel = new XMLHttpRequest();
-		pushChannel.onreadystatechange = function() {
-//			console.log((new Date()) + "openPushChannel: " + pushChannel.readyState + ", status: " + pushChannel.status + ", text: " + pushChannel.responseText);
-			if(pushChannel.readyState == 3) {
-				if (pushChannel.responseText) {
-					eval(pushChannel.responseText);
+		/**
+		 * Opens channel to the server a listen for notifications. 
+		 */
+	    function openPushChannel() {
+	
+			var pushChannel = new XMLHttpRequest();
+			pushChannel.onreadystatechange = function() {
+	//			console.log((new Date()) + "openPushChannel: " + pushChannel.readyState + ", status: " + pushChannel.status + ", text: " + pushChannel.responseText);
+				if(pushChannel.readyState == 3) {
+					if (pushChannel.responseText) {
+						eval(pushChannel.responseText);
+					}
+				} else if (pushChannel.readyState == 4) {
+					setTimeout(openPushChannel, 0);
 				}
-			} else if (pushChannel.readyState == 4) {
-				setTimeout(openPushChannel, 0);
+			};
+			try {
+				pushChannel.open('GET', url + Math.random() + 'pushChannel', true);
+				setSessionIdHeader(pushChannel);
+				pushChannel.setRequestHeader("jshybugger_title", document.title);
+				pushChannel.setRequestHeader("jshybugger_url", window.location.href); 
+				pushChannel.send();
+			} catch (e) {
+				//console.log("openPushChannel failed: " + e);
 			}
-		};
-		try {
-			pushChannel.open('GET', url + Math.random() + 'pushChannel', true);
-			pushChannel.send();
-		} catch (e) {
-			//console.log("openPushChannel failed: " + e);
 		}
-	}
+	    
+	    /**
+	     * Send HTTP request to debug server
+		 * @param {string} cmd command string
+		 * @param {string} data message content
+	     * 
+	     */
+	    function sendXmlData(cmd, data) {
+			var response,
+				xmlObj = new XMLHttpRequest();
+				
+			xmlObj.onreadystatechange = function() {
+				//console.log((new Date()) + "sendXmlData: " + xmlObj.readyState + ", status: " + xmlObj.status + ", text: " + xmlObj.responseText);
+				if(xmlObj.readyState == 4) {
+					response = xmlObj.status == '200' && xmlObj.responseText && xmlObj.responseText.length > 0 ? xmlObj.responseText : null;
+				}
+			};
+			try {
+				xmlObj.open ('POST', url + cmd, false);
+				setSessionIdHeader(xmlObj); 
+				xmlObj.send (stringifySafe(data));
+			} catch (e) {
+				//console.log("sendXmlData duration: " + (new Date().getTime() - startDate.getTime()) + "ms, " + cmd + " failed: " + e);
+			}
+			if (response && cmd != 'Console.messageAdded') {
+			//	console.log((new Date()) + "sendXmlData: " + response);
+			}
+			return response;
+	    }
+	} // end if (window['JsHybuggerNI'] === undefined)
     
-    /**
-     * Send HTTP request to debug server
-	 * @param {string} cmd command string
-	 * @param {string} data message content
-     * 
-     */
-    function sendXmlData(cmd, data) {
-		var response,
-			xmlObj = new XMLHttpRequest();
-			
-		xmlObj.onreadystatechange = function() {
-	//		console.log((new Date()) + "sendXmlData: " + xmlObj.readyState + ", status: " + xmlObj.status + ", text: " + xmlObj.responseText);
-			if(xmlObj.readyState == 4) {
-				response = xmlObj.status == '200' && xmlObj.responseText && xmlObj.responseText.length > 0 ? xmlObj.responseText : null;
-			}
-		};
-		try {
-			xmlObj.open ('POST', url + cmd, false);
-			xmlObj.send (stringifySafe(data));
-		} catch (e) {
-			//console.log("sendXmlData duration: " + (new Date().getTime() - startDate.getTime()) + "ms, " + cmd + " failed: " + e);
+    function setSessionIdHeader(xmlHttpRequest) {
+		var sessionid = sessionStorage["jshybuggerid"];
+		if (!sessionid) {
+			sessionid = "jshybuggerid" + new Date().getTime();
+			sessionStorage["jshybuggerid"] = sessionid;
 		}
-		if (response && cmd != 'Console.messageAdded') {
-		//	console.log((new Date()) + "sendXmlData: " + response);
-		}
-		return response;
-    }
+		xmlHttpRequest.setRequestHeader("jshybuggerid", sessionid);
+    }     
     
 	/**
 	 * Processes pending debugger queue messages.
@@ -323,7 +335,12 @@ window.JsHybugger = (function() {
 					return true;
 
 				case 'ClientConnected':
+					clientConnected = true;
 					return true;
+
+				case 'ClientDisconnected':
+					clientConnected=false;
+					return false;   // return false to ensure termination of messaging loop for debugger 
 
 				default:
 					// default dispatching 
@@ -473,24 +490,6 @@ window.JsHybugger = (function() {
 	}
 
     /**
-	 * Sends "Debugger.paused" message to debug server.
-	 */
-    function sendDebuggerPaused(reason, auxData) {
-		// clear continue to location information on pause
-		continueToLocation = null;
-		var callFrames = prepareStackInfo();
-		sendToDebugService('Debugger.paused', {
-			reason : reason,
-			auxData : auxData,
-			url : lastFile,
-			lineNumber : lastLine,
-			callFrames : callFrames
-		});
-		
-		processMessages(true);
-	}
-    
-    /**
 	 * Prepares stack info after break has occurred.
 	 */
     function prepareStackInfo() {
@@ -547,6 +546,10 @@ window.JsHybugger = (function() {
 	function initHybugger() {
 		replaceConsole();
 		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, url : location.href, securityOrigin : location.origin  });
+		
+		if (typeof(openPushChannel) !== 'undefined') {
+			openPushChannel();
+		}
 	}
 
 	/*
@@ -604,7 +607,7 @@ window.JsHybugger = (function() {
 			}
 		}
 
-		sendDebuggerPaused('other', {});
+		Debugger.sendPaused('other', {});
 	}
 
 	/**
@@ -617,7 +620,7 @@ window.JsHybugger = (function() {
 		if (pauseOnExceptionsState != 'none') {
 			// none, all, uncaught - at the moment uncaught and all is the
 			// same
-			sendDebuggerPaused('exception', {
+			Debugger.sendPaused('exception', {
 				description : e.toString()
 			});
 		}
@@ -661,7 +664,28 @@ window.JsHybugger = (function() {
      */
     Debugger = {
 
-		/**
+	    /**
+		 * Sends "Debugger.paused" message to debug server.
+		 */
+    	sendPaused : function(reason, auxData) {
+			// clear continue to location information on pause
+			continueToLocation = null;
+			if (clientConnected) {
+				var callFrames = prepareStackInfo();
+				sendToDebugService('Debugger.paused', {
+					reason : reason,
+					auxData : auxData,
+					url : lastFile,
+					lineNumber : lastLine,
+					callFrames : callFrames
+				});
+				
+				processMessages(true);
+			}
+		},
+	    
+
+    	/**
 		 * Handles "evaluateOnCallFrame" messages and send back result to debugger client.
 		 */
 		evaluateOnCallFrame : function(params) {

@@ -18,7 +18,6 @@ package org.jshybugger.proxy;
 import java.io.IOException;
 
 import org.jshybugger.server.DebugServer;
-import org.jshybugger.server.DebugSession;
 
 import android.app.Service;
 import android.content.ComponentName;
@@ -37,8 +36,6 @@ import android.util.Log;
  * The Class DebugService.
  */
 public class DebugService extends Service {
-
-	private DebugSession debugSession;
 
 	private JSDInterface browserInterface;
 
@@ -74,13 +71,9 @@ public class DebugService extends Service {
 			}		
 			debugServer = new DebugServer( debugPort );
 			
-			debugSession = new ProxyDebugSession(this);
 			browserInterface = new JSDInterface();
+			debugServer.addHandler("/jshybugger/.*", new JSHybuggerResourceHandler(getApplicationContext(), debugServer));
 			
-			debugServer.addHandler("/jshybugger/.*", new JSHybuggerResourceHandler(browserInterface));
-			debugSession.setBrowserInterface(browserInterface);
-			
-			debugServer.exportSession(debugSession);
 			LogActivity.addMessage("DebugServer listening on port " + debugPort);			
 
 		} catch (IOException ie) {

@@ -4,7 +4,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import org.jshybugger.JsHybugger;
-import org.json.JSONException;
+import org.jshybugger.server.DebugServer;
+import org.jshybugger.server.DebugSession;
 import org.json.JSONObject;
 import org.webbitserver.HttpControl;
 import org.webbitserver.HttpHandler;
@@ -12,14 +13,16 @@ import org.webbitserver.HttpRequest;
 import org.webbitserver.HttpResponse;
 
 import android.content.Context;
-import android.util.Log;
 
 class JSHybuggerResourceHandler implements HttpHandler {
 
-	private final JSDInterface browserInterface;
-	
-	JSHybuggerResourceHandler(JSDInterface browserInterface) {
-		this.browserInterface = browserInterface;
+	private final  DebugServer debugServer;
+	private long lastCheckedTimeStamp = System.currentTimeMillis();
+	private Context context;
+
+	public JSHybuggerResourceHandler(Context context, DebugServer debugServer) {
+		this.debugServer = debugServer;
+		this.context = context;
 	}
 
 	@Override
@@ -44,7 +47,7 @@ class JSHybuggerResourceHandler implements HttpHandler {
 		} else {
 		
 			String uri = req.uri();
-			//Log.d("JSHybuggerResourceHandler",  req.method() + ": " + req.uri());
+			//Log.d(TAG,  "START: " + req);
 			if (uri.endsWith("jshybugger.js")) {
 				res.header("Cache-control", "no-cache, no-store");
 				res.header("Expires", "0");
@@ -64,26 +67,22 @@ class JSHybuggerResourceHandler implements HttpHandler {
 			} else if (uri.endsWith("sendToDebugService")) {
 									
 				JSONObject jsonReq = new JSONObject(req.body());
-				this.browserInterface.sendToDebugService(jsonReq.getString("arg0"), jsonReq.getString("arg1"));
+				getBrowserInterface(req,res).sendToDebugService(jsonReq.getString("arg0"), jsonReq.getString("arg1"));
 				
 			} else if (uri.endsWith("sendReplyToDebugService")) {
-				
-				try{
-					JSONObject jsonReq = new JSONObject(req.body());
-					this.browserInterface.sendReplyToDebugService(jsonReq.getInt("arg0"), jsonReq.getString("arg1"));
-				} catch (JSONException jse) {
-					Log.e("browserInterface", req.toString() + ", len: " + req.header("Content-Length"));
-					Log.e("browserInterface", "sendReplyToDebugService failed. " + jse);
-				}
+									
+				JSONObject jsonReq = new JSONObject(req.body());
+				getBrowserInterface(req,res).sendReplyToDebugService(jsonReq.getInt("arg0"), jsonReq.getString("arg1"));
+
 			} else if (uri.endsWith("getQueuedMessage")) {
 
 				JSONObject jsonReq = new JSONObject(req.body());
-				this.browserInterface.getQueuedMessage(res, jsonReq.getBoolean("arg0"));
+				getBrowserInterface(req,res).getQueuedMessage(res, jsonReq.getBoolean("arg0"));
 				return;
 				
 			} else if (uri.endsWith("pushChannel")) {
 
-				this.browserInterface.openPushChannel(res);
+				getBrowserInterface(req,res).openPushChannel(res);
 				return;
 				
 			} else {
@@ -91,5 +90,38 @@ class JSHybuggerResourceHandler implements HttpHandler {
 			}
 			res.end();
 		}
+	}
+
+	private JSDInterface getBrowserInterface(HttpRequest req, HttpResponse resp) {
+		String sessionId = req.header("jshybuggerid");
+		DebugSession debugSession = debugServer.getDebugSession(sessionId);
+		if (debugSession == null) {
+			JSDInterface browserInterface = new JSDInterface();
+			debugSession = new DebugSession(context, sessionId);
+			debugSession.setBrowserInterface(browserInterface);
+			try {
+				debugServer.exportSession(debugSession);
+			} catch (InterruptedException e) {
+				throw new RuntimeException("Exporting session failed",e);
+			}
+		}
+		// only set by the push channel
+		String title = req.header("jshybugger_title");
+		if (title != null) {
+			debugSession.setTitle(title);
+			debugSession.setUrl( req.header("jshybugger_url"));
+			// check the session every 5 minutes if there are sessions older then 5 minutes
+			if ( (lastCheckedTimeStamp + 5*60*1000) < System.currentTimeMillis()) {
+				DebugSession[] debugSessions = debugServer.getDebugSessions();
+				for (DebugSession session : debugSessions) {
+					if (session.getLastUsedTimeStamp() < lastCheckedTimeStamp) {
+						debugServer.unExportSession(session);
+					}
+				}
+				lastCheckedTimeStamp = System.currentTimeMillis();
+			}
+		}
+		debugSession.updateLastUsedTimeStamp();
+		return (JSDInterface)debugSession.getBrowserInterface();
 	}
 }

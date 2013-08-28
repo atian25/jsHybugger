@@ -16,7 +16,6 @@
 package org.jshybugger.server;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,14 +58,25 @@ public class DebugSession extends BaseWebSocketHandler {
 	public final String PROVIDER_PROTOCOL;
 
 	private final String sessionId;
+	private String title;
+	private String url;
+	private long lastUsedTimeStamp;
 	
 	/**
 	 * Instantiates a new debug server.
 	 *
 	 * @param application the application context
-	 * @throws UnknownHostException the unknown host exception
 	 */
-	public DebugSession( Context application ) throws UnknownHostException {
+	public DebugSession( Context application ) {
+		this(application, UUID.randomUUID().toString().toUpperCase());
+	}
+	
+	/**
+	 * Instantiates a new debug server.
+	 *
+	 * @param application the application context
+	 */
+	public DebugSession( Context application, String sessionId ) {
 		this.application = application;
 		PROVIDER_PROTOCOL = DebugContentProvider.getProviderProtocol(application);
 		
@@ -82,7 +92,7 @@ public class DebugSession extends BaseWebSocketHandler {
 		msgHandler = new PageMsgHandler(this);
 		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
 
-		sessionId = UUID.randomUUID().toString().toUpperCase();
+		this.sessionId = sessionId;
 	}
 	
 	public void setBrowserInterface(BrowserInterface browserInterface) {
@@ -128,7 +138,7 @@ public class DebugSession extends BaseWebSocketHandler {
 		connections.add(conn);
 
 		try {
-				getBrowserInterface().sendMsgToWebView(
+			getBrowserInterface().sendMsgToWebView(
 						"ClientConnected",
 						new JSONObject(),
 						null);
@@ -145,6 +155,14 @@ public class DebugSession extends BaseWebSocketHandler {
 	public void onClose( WebSocketConnection conn) {
 		Log.d(TAG, conn + " has left the debugger space!" );
 		connections.remove(conn);
+		try {
+			getBrowserInterface().sendMsgToWebView(
+						"ClientDisconnected",
+						new JSONObject(),
+						null);
+		} catch (JSONException e) {
+			Log.e(TAG, "Notify ClientDisconnected failed", e);
+		}		
 	}
 
 	/* (non-Javadoc)
@@ -258,4 +276,46 @@ public class DebugSession extends BaseWebSocketHandler {
 	public String getSessionId() {
 		return sessionId;
 	}
+	
+	/**
+	 * @return the title
+	 */
+	public String getTitle() {
+		return title;
+	}
+
+	/**
+	 * @param title the title to set
+	 */
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	/**
+	 * @return the url
+	 */
+	public String getUrl() {
+		return url;
+	}
+
+	/**
+	 * @param url the url to set
+	 */
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	/**
+	 * @return the lastUsedTimeStamp
+	 */
+	public long getLastUsedTimeStamp() {
+		return lastUsedTimeStamp;
+	}
+
+	/**
+	 * @param lastUsedTimeStamp the lastUsedTimeStamp to set
+	 */
+	public void updateLastUsedTimeStamp() {
+		this.lastUsedTimeStamp = System.currentTimeMillis();
+	}	
 }
