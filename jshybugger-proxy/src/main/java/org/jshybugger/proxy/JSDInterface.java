@@ -104,8 +104,8 @@ public class JSDInterface extends AbstractBrowserInterface {
 		}
 	}
 
-
-	public void stop() {
+	@Override
+	public void destroy() {
 		executorService.shutdownNow();
 	}
 }

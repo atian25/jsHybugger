@@ -93,7 +93,7 @@ public class DebugService extends Service {
 	public void onDestroy() {
 		super.onDestroy();
 		if (browserInterface != null) {
-			browserInterface.stop();
+			browserInterface.destroy();
 		}
 		if (debugServer != null) {
 			debugServer.stop();

@@ -101,7 +101,7 @@ public class DebugServer {
             public void handleHttpRequest(HttpRequest request, HttpResponse response, HttpControl control) {
                 response.status(301).header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
                 if (debugSessions.size() == 1) {
-                	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.get(0).getSessionId()));
+                	response.header("Location", String.format(CHROME_DEVTOOLS_FRONTEND, request.header("Host"), debugSessions.values().iterator().next().getSessionId()));
                 } else if (debugSessions.size() > 1) {
 					InputStream is = null;
 					try {
@@ -221,6 +221,11 @@ public class DebugServer {
 	}
 
 	public void stop() {
+		for (DebugSession debugSession : debugSessions.values()) {
+			debugSession.stop();
+		}
+		debugSessions.clear();
+		
 		if (webServer != null) {
 			webServer.stop();
 		}

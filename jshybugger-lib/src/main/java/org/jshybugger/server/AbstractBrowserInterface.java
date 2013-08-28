@@ -195,4 +195,9 @@ public abstract class AbstractBrowserInterface implements BrowserInterface {
 		
 		return null;
 	}
+	
+	@Override
+	public void destroy() {
+		// do nothing
+	}
 }

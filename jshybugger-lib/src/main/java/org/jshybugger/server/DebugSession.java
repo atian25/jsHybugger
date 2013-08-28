@@ -317,5 +317,11 @@ public class DebugSession extends BaseWebSocketHandler {
 	 */
 	public void updateLastUsedTimeStamp() {
 		this.lastUsedTimeStamp = System.currentTimeMillis();
-	}	
+	}
+	
+	public void stop() {
+		if (browserInterface != null) {
+			browserInterface.destroy();
+		}
+	}
 }

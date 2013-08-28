@@ -72,4 +72,10 @@ public interface BrowserInterface {
 	 * @throws InterruptedException the interrupted exception
 	 */
 	public String getQueuedMessage(boolean wait) throws InterruptedException;
+	
+	/**
+	 * Destroys all resources used for the browser communication.
+	 * The interface can't be used any longer after this method was called. 
+	 */
+	public void destroy();
 }

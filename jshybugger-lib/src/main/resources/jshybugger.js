@@ -51,6 +51,8 @@ window.JsHybugger = (function() {
 	if (window['JsHybuggerNI'] === undefined) {
 		console.info("JsHybugger loaded outside a native app.");
 		window['JsHybuggerNI'] = {
+			usePushChannel : true,
+			
 			sendToDebugService : function(method, data) {
 				
 				sendXmlData('sendToDebugService', { arg0: method, arg1: data});
@@ -547,7 +549,7 @@ window.JsHybugger = (function() {
 		replaceConsole();
 		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, url : location.href, securityOrigin : location.origin  });
 		
-		if (typeof(openPushChannel) !== 'undefined') {
+		if (JsHybuggerNI['usePushChannel']) {
 			openPushChannel();
 		}
 	}
