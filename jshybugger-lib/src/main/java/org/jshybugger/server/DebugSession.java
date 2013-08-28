@@ -70,7 +70,6 @@ public class DebugSession extends BaseWebSocketHandler {
 	public DebugSession( Context application ) {
 		this(application, UUID.randomUUID().toString().toUpperCase());
 	}
-	
 	/**
 	 * Instantiates a new debug server.
 	 *
@@ -138,7 +137,7 @@ public class DebugSession extends BaseWebSocketHandler {
 		connections.add(conn);
 
 		try {
-			getBrowserInterface().sendMsgToWebView(
+				getBrowserInterface().sendMsgToWebView(
 						"ClientConnected",
 						new JSONObject(),
 						null);
