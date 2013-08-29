@@ -65,8 +65,7 @@ import android.util.Base64OutputStream;
 import android.util.Log;
 
 /**
- * The DebugContentProvider is responsible for delivering file resources to an client (WebView).
- * Sp  
+ * The DebugContentProvider is responsible for delivering file resources to an client (WebView, Browser).
  */
 public class DebugContentProvider extends ContentProvider {
 
@@ -211,14 +210,21 @@ public class DebugContentProvider extends ContentProvider {
 					// return instrumented js code
 					return ParcelFileDescriptor.open(outFile, ParcelFileDescriptor.MODE_READ_ONLY);
 
+				} catch (EvaluatorException e) {
+			        Log.d(TAG, "parsing failure while instrumenting file: " + e.getMessage());
+			        
+					writeInstrumentedCacheFile(url, e.getMessage(), cacheFile, outFile, false);
+					writeSourceCacheFile(e, cacheFile);
+					
+					return ParcelFileDescriptor.open(outFile, ParcelFileDescriptor.MODE_READ_ONLY);
+			        
 				} catch (Exception e) {
 			        Log.d(TAG, "instrumentation failed, delivering original file: " + uri, e);
 
-			        // delete file - maybe partially instrumented file.
-					outFile.delete();
+					writeInstrumentedCacheFile(url, e.getMessage(), cacheFile, outFile, true);
+					writeSourceCacheFile(e, cacheFile);
 					
-					cacheFile = writeNotIntrumentedCacheFile(e, searchCacheFile(url));
-					return ParcelFileDescriptor.open(cacheFile, ParcelFileDescriptor.MODE_READ_ONLY);
+					return ParcelFileDescriptor.open(outFile, ParcelFileDescriptor.MODE_READ_ONLY);
 					
 				} finally {
 					resource.getInputStream().close();
@@ -236,6 +242,31 @@ public class DebugContentProvider extends ContentProvider {
 
 		return null;
     }
+
+	private File writeInstrumentedCacheFile(String url, String message, File inputFile,
+			File outFile, boolean appendOriginalSource) throws IOException {
+	
+		BufferedInputStream inputStream = new BufferedInputStream(new FileInputStream(inputFile));
+		
+		// now write original content
+		BufferedOutputStream fout = new BufferedOutputStream(new FileOutputStream(outFile));
+
+		fout.write(("JsHybugger.loadFile('" + url + "', 0);").getBytes());
+		fout.write(("console.log('" + (message != null ? message : "Instrumentation failed, reason unknown.") + "');").getBytes());
+		
+		if (appendOriginalSource) {
+			byte buffer[] = new byte[8096];
+			int len;
+	 		while ((len=inputStream.read(buffer))>0) {
+				fout.write(buffer, 0, len);
+			}
+		}
+		
+		fout.close();
+		inputStream.close();
+		
+		return outFile;	
+	}
 
 	private boolean isChangedCacheFile(File cacheFile) {
 		return cacheFile.getAbsolutePath().startsWith(changed_cache_dir.getAbsolutePath());
@@ -261,7 +292,7 @@ public class DebugContentProvider extends ContentProvider {
 		resource.inputStream.reset();
 	}
 
-	private File writeNotIntrumentedCacheFile(Exception ex, File cacheFile) throws IOException {
+	private File writeSourceCacheFile(Exception ex, File cacheFile) throws IOException {
 		
 		File inputFile = new File(cacheFile.getAbsolutePath() + ".tmp");
 		cacheFile.renameTo(inputFile);
@@ -273,12 +304,12 @@ public class DebugContentProvider extends ContentProvider {
 		byte buffer[] = new byte[8096];
 		int len;
 		
-		fout.write("/*\r\n jsHybugger instrumentation failed, file is not debuggable!\r\n".getBytes());
+		fout.write("/*+jsHybugger\r\n instrumentation failed, file is not debuggable!\r\n".getBytes());
 		fout.write(" Reason: ".getBytes());
 		fout.write(ex.toString().getBytes());
 		fout.write("\r\n\r\n".getBytes());
 		ex.printStackTrace(new PrintStream(fout));
-		fout.write("\r\n */\r\n".getBytes());
+		fout.write("\r\n jsHybugger-*/\r\n".getBytes());
 		
 		while ((len=inputStream.read(buffer))>0) {
 			fout.write(buffer, 0, len);
@@ -531,6 +562,11 @@ public class DebugContentProvider extends ContentProvider {
         String url = uri.getPath().substring(1);
         
 		try {
+			// strip header comment
+			if (scriptSource.startsWith("/*+jsHybugger")) {
+				scriptSource = scriptSource.substring(scriptSource.indexOf("jsHybugger-*/") + 14);
+			}
+			
 			// get original source
 			InputResource resource = 
 					new InputResource(true, false, new BufferedInputStream(new ByteArrayInputStream(scriptSource.getBytes())));			
@@ -561,18 +597,16 @@ public class DebugContentProvider extends ContentProvider {
 				} catch (EvaluatorException e) {
 			        Log.d(TAG, "parsing failure while instrumenting file: " + e.getMessage());
 
-			        // delete file - maybe partially instrumented file.
-					outFile.delete();
-					writeNotIntrumentedCacheFile(e, cacheFile);
+					writeInstrumentedCacheFile(url, e.getMessage(), cacheFile, outFile, false);
+					writeSourceCacheFile(e, cacheFile);
 			        
 					String writeConsole = e.getMessage();
 					throw new RuntimeException(writeConsole);
 				} catch (Exception e) {
-			        Log.d(TAG, "instrumentation failed: " + uri, e);
+			        Log.d(TAG, "instrumentation failed, delivering original file: " + uri, e);
 
-			        // delete file - maybe partially instrumented file.
-					outFile.delete();
-					writeNotIntrumentedCacheFile(e, cacheFile);
+					writeInstrumentedCacheFile(url, e.getMessage(), cacheFile, outFile, true);
+					writeSourceCacheFile(e, cacheFile);
 			        
 					throw new RuntimeException("instrumentation failed: " + uri, e);
 					
