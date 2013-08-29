@@ -64,45 +64,60 @@ class JSHybuggerResourceHandler implements HttpHandler {
 				//Log.d("jshybugger.js", "available: " + sb.length());
 				res.content(sb.toString());
 				
-			} else if (uri.endsWith("sendToDebugService")) {
-									
-				JSONObject jsonReq = new JSONObject(req.body());
-				getBrowserInterface(req,res).sendToDebugService(jsonReq.getString("arg0"), jsonReq.getString("arg1"));
-				
-			} else if (uri.endsWith("sendReplyToDebugService")) {
-									
-				JSONObject jsonReq = new JSONObject(req.body());
-				getBrowserInterface(req,res).sendReplyToDebugService(jsonReq.getInt("arg0"), jsonReq.getString("arg1"));
-
-			} else if (uri.endsWith("getQueuedMessage")) {
-
-				JSONObject jsonReq = new JSONObject(req.body());
-				getBrowserInterface(req,res).getQueuedMessage(res, jsonReq.getBoolean("arg0"));
-				return;
-				
-			} else if (uri.endsWith("pushChannel")) {
-
-				getBrowserInterface(req,res).openPushChannel(res);
-				return;
-				
 			} else {
-				res.status(204);
+				if (uri.endsWith("sendToDebugService")) {
+										
+					JSONObject jsonReq = new JSONObject(req.body());
+					JSDInterface browserInterface = getBrowserInterface(req,res, "GlobalInitHybugger".equals(jsonReq.getString("arg0")));
+					browserInterface.sendToDebugService(jsonReq.getString("arg0"), jsonReq.getString("arg1"));
+					
+				} else {
+					
+					JSDInterface browserInterface = getBrowserInterface(req,res, false);
+					if (browserInterface == null) {
+						res.status(205);
+					} else {
+						if (uri.endsWith("sendReplyToDebugService")) {
+					
+							JSONObject jsonReq = new JSONObject(req.body());
+							browserInterface.sendReplyToDebugService(jsonReq.getInt("arg0"), jsonReq.getString("arg1"));
+	
+						} else if (uri.endsWith("getQueuedMessage")) {
+	
+							JSONObject jsonReq = new JSONObject(req.body());
+							browserInterface.getQueuedMessage(res, jsonReq.getBoolean("arg0"));
+							return;
+							
+						} else if (uri.endsWith("pushChannel")) {
+		
+							browserInterface.openPushChannel(res);
+							return;
+							
+						} else {
+							res.status(204);
+						}
+					}
+				}
 			}
 			res.end();
 		}
 	}
 
-	private JSDInterface getBrowserInterface(HttpRequest req, HttpResponse resp) {
+	private JSDInterface getBrowserInterface(HttpRequest req, HttpResponse resp, boolean createSession) {
 		String sessionId = req.header("jshybuggerid");
 		DebugSession debugSession = debugServer.getDebugSession(sessionId);
 		if (debugSession == null) {
-			JSDInterface browserInterface = new JSDInterface();
-			debugSession = new DebugSession(context, sessionId);
-			debugSession.setBrowserInterface(browserInterface);
-			try {
-				debugServer.exportSession(debugSession);
-			} catch (InterruptedException e) {
-				throw new RuntimeException("Exporting session failed",e);
+			if  (createSession) {
+				JSDInterface browserInterface = new JSDInterface();
+				debugSession = new DebugSession(context, sessionId);
+				debugSession.setBrowserInterface(browserInterface);
+				try {
+					debugServer.exportSession(debugSession);
+				} catch (InterruptedException e) {
+					throw new RuntimeException("Exporting session failed",e);
+				}
+			} else {
+				return null;
 			}
 		}
 		// only set by the push channel

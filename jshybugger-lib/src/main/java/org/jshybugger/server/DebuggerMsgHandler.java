@@ -184,6 +184,11 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 			
 		} else if (method.equals("GlobalInitHybugger")) {
 			loadedScripts.clear();
+
+			if (debugSession.isConnected()) {
+				debugSession.getBrowserInterface().sendMsgToWebView("ClientConnected", null, null);
+			}
+				
 			sendGlobalObjectCleared(conn);
 			
 		} else {

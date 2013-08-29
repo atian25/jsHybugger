@@ -73,9 +73,11 @@ window.JsHybugger = (function() {
 		/**
 		 * Opens channel to the server a listen for notifications. 
 		 */
-	    function openPushChannel() {
+	    function openPushChannel(errorCounter) {
 	
+	    	errorCounter = errorCounter || 0;
 			var pushChannel = new XMLHttpRequest();
+			pushChannel.execTime = new Date().getTime();
 			pushChannel.onreadystatechange = function() {
 	//			console.log((new Date()) + "openPushChannel: " + pushChannel.readyState + ", status: " + pushChannel.status + ", text: " + pushChannel.responseText);
 				if(pushChannel.readyState == 3) {
@@ -83,15 +85,38 @@ window.JsHybugger = (function() {
 						eval(pushChannel.responseText);
 					}
 				} else if (pushChannel.readyState == 4) {
-					setTimeout(openPushChannel, 0);
+					if (pushChannel.status == 205) {  // debug session on server doesn't exist -> force page reload
+						location.reload();
+					} else if (status == 200) {
+						openPushChannel(0);     // some content has arrived -> poll for further messages
+					} else {
+						if (pushChannel.execTime + 100 > new Date().getTime()) {  
+							// some error - if the time diff. between send and rec. is less than 100ms - this might be 
+							// if the debug server is down try it again and count the errors 
+							openPushChannel(++errorCounter);
+						} else {
+							// this is a "normal" error - if no content was received while waiting - occurs after 15 secs.
+							openPushChannel(0);
+						}
+					}
 				}
 			};
+			
 			try {
-				pushChannel.open('GET', url + Math.random() + 'pushChannel', true);
-				setSessionIdHeader(pushChannel);
-				pushChannel.setRequestHeader("jshybugger_title", document.title);
-				pushChannel.setRequestHeader("jshybugger_url", window.location.href); 
-				pushChannel.send();
+				var reqFctn = function() {
+					pushChannel.open('GET', url + Math.random() + 'pushChannel', true);
+					setSessionIdHeader(pushChannel);
+					pushChannel.setRequestHeader("jshybugger_title", document.title);
+					pushChannel.setRequestHeader("jshybugger_url", window.location.href); 
+					pushChannel.send();
+				};
+				
+				// delay execution for 5 seconds to prevent flood of messages if debug server is not reachable
+				if (errorCounter >= 10) {  
+					setTimeout(reqFctn, 5000);    
+				} else {
+					setTimeout(reqFctn, 0);    
+				}
 			} catch (e) {
 				//console.log("openPushChannel failed: " + e);
 			}
@@ -110,6 +135,9 @@ window.JsHybugger = (function() {
 			xmlObj.onreadystatechange = function() {
 				//console.log((new Date()) + "sendXmlData: " + xmlObj.readyState + ", status: " + xmlObj.status + ", text: " + xmlObj.responseText);
 				if(xmlObj.readyState == 4) {
+					if (xmlObj.status == 205) {
+						location.reload();
+					}
 					response = xmlObj.status == '200' && xmlObj.responseText && xmlObj.responseText.length > 0 ? xmlObj.responseText : null;
 				}
 			};
@@ -130,7 +158,7 @@ window.JsHybugger = (function() {
     function setSessionIdHeader(xmlHttpRequest) {
 		var sessionid = sessionStorage["jshybuggerid"];
 		if (!sessionid) {
-			sessionid = "jshybuggerid" + new Date().getTime();
+			sessionid = "jsHybuggerID-" + new Date().getTime();
 			sessionStorage["jshybuggerid"] = sessionid;
 		}
 		xmlHttpRequest.setRequestHeader("jshybuggerid", sessionid);
