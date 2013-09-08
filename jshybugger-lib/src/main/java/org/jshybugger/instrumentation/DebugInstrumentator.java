@@ -25,7 +25,9 @@ import org.mozilla.javascript.ast.Assignment;
 import org.mozilla.javascript.ast.AstNode;
 import org.mozilla.javascript.ast.AstRoot;
 import org.mozilla.javascript.ast.Block;
+import org.mozilla.javascript.ast.BreakStatement;
 import org.mozilla.javascript.ast.CatchClause;
+import org.mozilla.javascript.ast.ContinueStatement;
 import org.mozilla.javascript.ast.EmptyStatement;
 import org.mozilla.javascript.ast.ExpressionStatement;
 import org.mozilla.javascript.ast.ForInLoop;
@@ -44,6 +46,7 @@ import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.ScriptNode;
 import org.mozilla.javascript.ast.StringLiteral;
 import org.mozilla.javascript.ast.SwitchCase;
+import org.mozilla.javascript.ast.SwitchStatement;
 import org.mozilla.javascript.ast.ThrowStatement;
 import org.mozilla.javascript.ast.TryStatement;
 import org.mozilla.javascript.ast.UnaryExpression;
@@ -151,9 +154,34 @@ public class DebugInstrumentator implements NodeVisitor {
 			if (node.getType() == Token.DEBUGGER) {
 				instrumentStatement(node, true);
 			}
+		} else if (node instanceof SwitchStatement) {
+			instrumentStatement(node, false);
+			
+			
 		} else if (node instanceof SwitchCase) {
 
-			return false; // TODO fixit
+			List<AstNode> stmts = ((SwitchCase)node).getStatements();
+			List<AstNode> instrStmts = new ArrayList<AstNode>();
+			if (stmts != null) {
+				for (AstNode stmt : stmts) {
+					int lineno = stmt.getLineno();
+					ExpressionStatement trackStmt = makeExpression(makeFunctionCall("JsHybugger.track", scriptURI, lineno, false));
+					if (trackStmt != null) {
+						instrStmts.add(trackStmt);
+					}					
+					instrStmts.add(stmt);
+				}
+				((SwitchCase)node).setStatements(instrStmts);
+			}
+			return true;
+			
+		} else if (node instanceof ContinueStatement) {
+
+			instrumentStatement(node, false);
+			
+		} else if (node instanceof BreakStatement) {
+
+			instrumentStatement(node, false);
 		} else if (node instanceof EmptyStatement) {
 		} else if (node instanceof NumberLiteral) {
 		} else {
@@ -176,12 +204,21 @@ public class DebugInstrumentator implements NodeVisitor {
 	 */
 	private void instrumentStatement(AstNode node, boolean debugger) {
 
-		if ((node.getPosition() == 0) || processedLines.contains(node.getLineno()) || (node.getParent() instanceof ForInLoop)) {
+		if ((node.getPosition() == 0) || 
+				processedLines.contains(node.getLineno()) || 
+				(node.getParent() instanceof ForInLoop) ||
+				(node.getParent() instanceof LabeledStatement) ||
+				(node.getParent() instanceof SwitchCase)) {
 			return;
 		}
 		
 		ExpressionStatement expr = makeExpression(makeFunctionCall("JsHybugger.track", scriptURI, node.getLineno(), debugger));
-		node.getParent().addChildBefore(expr, node);
+		try {
+			node.getParent().addChildBefore(expr, node);
+		} catch (NullPointerException npe) {
+			// report instrumentation failure and continue
+			System.err.println("Statement '" + node.getClass().getSimpleName() + "' not instrumented. file: " + scriptURI + ", line: " +  node.getLineno());
+		}
 	}
 	
 	/**
@@ -377,7 +414,9 @@ public class DebugInstrumentator implements NodeVisitor {
 				
 			} else if (arg instanceof Integer) {
 				NumberLiteral nArg = new NumberLiteral();
+				nArg.setType(Token.NUMBER);
 				nArg.setValue(String.valueOf(arg));
+				nArg.setNumber((Integer)arg);
 				call.addArgument(nArg);
 
 			} else if (arg instanceof Boolean) {
