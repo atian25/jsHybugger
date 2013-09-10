@@ -61,6 +61,9 @@ import org.mozilla.javascript.ast.WhileLoop;
  */
 public class DebugInstrumentator implements NodeVisitor {
 
+	/** The Constant VERSION defines the version of code instrumentation . */
+	public static final String VERSION = "2.0.0";
+	
 	/** The processed lines. */
 	private HashSet<Integer> processedLines = new HashSet<Integer>();
 	

@@ -20,6 +20,8 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import org.jshybugger.instrumentation.DebugInstrumentator;
+
 /**
  * The helper class Md5Checksum calculates the MD5 checksum for file resources.
  */
@@ -51,7 +53,8 @@ public class Md5Checksum {
 				complete.update(buffer, 0, numRead);
 			}
 		} while (numRead != -1);
-
+		complete.update(DebugInstrumentator.VERSION.getBytes());
+		
 		return complete.digest();
 	}
 
