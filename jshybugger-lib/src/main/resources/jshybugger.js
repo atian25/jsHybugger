@@ -244,10 +244,8 @@ window.JsHybugger = (function() {
 			
                 var args = Array.prototype.slice.call(arguments),
                  	parameters = [], i,
-					type = typeof (args[i]),
-					arg = {
-						type : type
-					},
+					type,
+					arg,
 					prop,
 					propVal,
 					propType;
@@ -269,6 +267,11 @@ window.JsHybugger = (function() {
 
 				for ( i = 0; args && i < args.length; i++) {
 					
+					type = typeof (args[i]);
+					arg = {
+						type : type
+					};
+					
 					if (type == 'object') {
 						arg.description = arg.className = args[i].constructor &&
 								args[i].constructor.name ? args[i].constructor.name :
@@ -288,7 +291,7 @@ window.JsHybugger = (function() {
 							arg.preview.properties
 									.push({
 										name : prop,
-										type : (propType == 'object' && propVal.constructor && propVal.constructor.name ? 
+										type : (propVal && propType == 'object' && propVal.constructor && propVal.constructor.name ? 
 												propVal.constructor.name : propType),
 										value : propVal
 									});
@@ -575,7 +578,7 @@ window.JsHybugger = (function() {
 	 */
 	function initHybugger() {
 		replaceConsole();
-		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, url : location.href, securityOrigin : location.origin  });
+		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, title : document.title || 'untitled', url : location.href, securityOrigin : location.origin  });
 		
 		if (JsHybuggerNI['usePushChannel']) {
 			openPushChannel();
@@ -593,7 +596,9 @@ window.JsHybugger = (function() {
 
     	var msg;
 		sendToDebugService('GlobalPageLoaded', {
-			frameId : FRAME_ID
+			frameId : FRAME_ID,
+			title : document.title || 'untitled', 
+			url : location.href
 		});
 
 		// before returning - process all pending queue messages
@@ -877,28 +882,28 @@ window.JsHybugger = (function() {
 				varnames = stack && stack.varnames ? stack.varnames.split(",") : [];
 				for (i=0; i < varnames.length; i++) {
 					try {
-						expr = stack.evalScope(varnames[i]);
-						result = {};
-						oType = typeof(expr);
-						result.value = {
-							type:oType,
-							description: String(expr)
-						};
-						if (expr && (oType == 'object')) {
-							result.value.objectId='stack:' + objectParams[1] + ":"+ varnames[i];
-							result.value.description = expr.constructor && expr.constructor.name ? expr.constructor.name : 'object';
-						} else {
-							result.value.value = expr;
-						}
-						
-						result.writable = false;
-						result.enumerable = false;
-						result.configurable = false;
-						result.name = varnames[i];
-						results.push(result);
+						expr = stack.evalScope.call(stack.that, varnames[i]);
 					} catch (e) {
-						console.error("getProperties() failed for variable: " + varnames[i] + ", " + e);
+						expr = undefined;
 					}
+					result = {};
+					oType = typeof(expr);
+					result.value = {
+						type:oType,
+						description: String(expr)
+					};
+					if (expr && (oType == 'object')) {
+						result.value.objectId='stack:' + objectParams[1] + ":"+ varnames[i];
+						result.value.description = expr.constructor && expr.constructor.name ? expr.constructor.name : 'object';
+					} else {
+						result.value.value = expr;
+					}
+					
+					result.writable = false;
+					result.enumerable = false;
+					result.configurable = false;
+					result.name = varnames[i];
+					results.push(result);
 				}
 			} else {
 				obj = Runtime._getObject(params.objectId);
@@ -1046,7 +1051,7 @@ window.JsHybugger = (function() {
 				exprID;
 
 			try {
-				evalResult = stack && stack.evalScope ? stack.evalScope(params.expression) : eval.call(document, params.expression);
+				evalResult = stack && stack.evalScope ? stack.evalScope.call(stack.that, params.expression) : eval.call(document, params.expression);
 				if (stack) {
 
 					response.type = typeof(evalResult);
