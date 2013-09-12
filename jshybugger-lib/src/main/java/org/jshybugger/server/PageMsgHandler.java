@@ -134,9 +134,17 @@ public class PageMsgHandler extends AbstractMsgHandler {
 			throws JSONException {
 		
 		if ("GlobalInitHybugger".equals(method)) {
+			
+			debugSession.setTitle(message.getString("title"));
+			debugSession.setUrl(message.getString("url"));
+			
 			sendLoadEventFired(conn, message);
 			
 		} else if ("GlobalPageLoaded".equals(method)) {
+			
+			debugSession.setTitle(message.getString("title"));
+			debugSession.setUrl(message.getString("url"));
+
 			sendDomContentEventFired(conn, message);
 			
 		} else {
@@ -179,13 +187,6 @@ public class PageMsgHandler extends AbstractMsgHandler {
 					.endObject()
 				.toString());
 			
-			conn.send(new JSONStringer().object()
-				.key("method").value("Page.loadEventFired")
-					.key("params").object()
-				    	.key("timestamp").value(System.currentTimeMillis())
-					.endObject()
-				.endObject()
-			.toString());
 		}
 	}
 
@@ -207,6 +208,14 @@ public class PageMsgHandler extends AbstractMsgHandler {
 					.endObject()
 				.endObject()
 			.toString());
+
+			conn.send(new JSONStringer().object()
+					.key("method").value("Page.loadEventFired")
+						.key("params").object()
+					    	.key("timestamp").value(System.currentTimeMillis())
+						.endObject()
+					.endObject()
+				.toString());
 
 			conn.send(new JSONStringer().object()
 					.key("method").value("Page.frameStoppedLoading")
