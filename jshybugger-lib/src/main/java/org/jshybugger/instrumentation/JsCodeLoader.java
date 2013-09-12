@@ -70,13 +70,13 @@ public class JsCodeLoader {
 					public void run() {
 						AstRoot ast;
 						Parser jsParser = new Parser();
-						Log.i(TAG, "Parsing file: " + scriptUri);
+						Log.i(TAG, "Instrumenting file: " + scriptUri);
 						try {
 							ast = jsParser.parse(inputStreamReader, scriptUri, 0);
-							Log.i(TAG, "Instrumenting file: " + scriptUri);
+							//Log.i(TAG, "Instrumenting file: " + scriptUri);
 							ast.visit(new DebugInstrumentator());
 							
-							Log.i(TAG, "Writing file: " + scriptUri);
+							//Log.i(TAG, "Writing file: " + scriptUri);
 							BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
 							writer.write(ast.toSource());
 							writer.close();
