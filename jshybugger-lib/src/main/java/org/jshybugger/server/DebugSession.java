@@ -18,6 +18,7 @@ package org.jshybugger.server;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ public class DebugSession extends BaseWebSocketHandler {
 	private static final String TAG = "DebugServer";
 	
 	/** The message handler list. */
-	private final HashMap<String,MessageHandler> HANDLERS = new HashMap<String,MessageHandler>(); 
+	private final HashMap<String,MessageHandler> HANDLERS = new LinkedHashMap<String,MessageHandler>(); 
 	
 	/** The application context. */
 	protected Context application;
@@ -70,6 +71,7 @@ public class DebugSession extends BaseWebSocketHandler {
 	public DebugSession( Context application ) {
 		this(application, UUID.randomUUID().toString().toUpperCase());
 	}
+	
 	/**
 	 * Instantiates a new debug server.
 	 *
@@ -79,18 +81,18 @@ public class DebugSession extends BaseWebSocketHandler {
 		this.application = application;
 		PROVIDER_PROTOCOL = DebugContentProvider.getProviderProtocol(application);
 		
-		MessageHandler msgHandler = new DebuggerMsgHandler(this);
+		MessageHandler msgHandler = new PageMsgHandler(this);
+		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
+
+		msgHandler = new DebuggerMsgHandler(this);
+		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
+
+		msgHandler = new RuntimeMsgHandler(this);
 		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
 
 		msgHandler = new ConsoleMsgHandler(this);
 		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
 		
-		msgHandler = new RuntimeMsgHandler(this);
-		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-
-		msgHandler = new PageMsgHandler(this);
-		HANDLERS.put(msgHandler.getObjectName(), msgHandler);
-
 		this.sessionId = sessionId;
 	}
 	
@@ -137,7 +139,7 @@ public class DebugSession extends BaseWebSocketHandler {
 		connections.add(conn);
 
 		try {
-				getBrowserInterface().sendMsgToWebView(
+			getBrowserInterface().sendMsgToWebView(
 						"ClientConnected",
 						new JSONObject(),
 						null);
