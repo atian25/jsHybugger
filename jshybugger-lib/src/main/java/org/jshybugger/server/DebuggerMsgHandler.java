@@ -246,7 +246,7 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 		final JSONObject params = message.getJSONObject("params");
 		Breakpoint breakpoint = Breakpoint.valueOf(params.getString("breakpointId"));
 
-		Log.d(TAG, "removeBreakpoint: " + breakpoint);
+		//Log.d(TAG, "removeBreakpoint: " + breakpoint);
 		
 		Set<Breakpoint> breakpoints = scriptBreakpoints.get(breakpoint.file);
 		if (breakpoints != null) {
@@ -277,55 +277,67 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 	private void setBreakpointByUrl(final WebSocketConnection conn, final int id, final String url, final int lineNumber, final String condition, final boolean actualLocation) throws JSONException {
 				
 		final Breakpoint breakpoint = new Breakpoint(url, lineNumber, condition);
-		Log.d(TAG, "setBreakpointByUrl: " + breakpoint);
+		//Log.d(TAG, "setBreakpointByUrl: " + breakpoint);
 
 		JSONObject params = new JSONObject();
 		params.put("condition", condition);
 		params.put("lineNumber", lineNumber);
 		params.put("url", url);
 		
-		debugSession.getBrowserInterface().sendMsgToWebView(
-				"Debugger.setBreakpointByUrl",
-				new JSONObject().put("params", params),
-				new ReplyReceiver() {
-
-			@Override
-			public void onReply(JSONObject data) throws JSONException {
-				
-				
-				// add breakpoint to internal list of breakpoints
-				Set<Breakpoint> breakpoints = scriptBreakpoints.get(url);
-				if (breakpoints == null) {
-					breakpoints = new HashSet<Breakpoint>();
-					scriptBreakpoints.put(url, breakpoints);
-				}
-				breakpoints.add(breakpoint);
-				
-				JSONStringer res = new JSONStringer().object()
-						.key("id").value(id)
-						.key("result").object()
-							.key("breakpointId").value(data.getString("breakpointId"));
-				
-				if (actualLocation) {
-					res.key("actualLocation").object()
-						.key("scriptId").value(url)
-						.key("lineNumber").value(lineNumber)
-						.key("columnNumber").value(0)
-					.endObject();
-				} else {
-					res.key("locations").array()
-						.object()
+		if (loadedScripts.get(url)>0) {
+			debugSession.getBrowserInterface().sendMsgToWebView(
+					"Debugger.setBreakpointByUrl",
+					new JSONObject().put("params", params),
+					new ReplyReceiver() {
+	
+				@Override
+				public void onReply(JSONObject data) throws JSONException {
+					
+					
+					// add breakpoint to internal list of breakpoints
+					Set<Breakpoint> breakpoints = scriptBreakpoints.get(url);
+					if (breakpoints == null) {
+						breakpoints = new HashSet<Breakpoint>();
+						scriptBreakpoints.put(url, breakpoints);
+					}
+					breakpoints.add(breakpoint);
+					
+					JSONStringer res = new JSONStringer().object()
+							.key("id").value(id)
+							.key("result").object()
+								.key("breakpointId").value(data.getString("breakpointId"));
+					
+					if (actualLocation) {
+						res.key("actualLocation").object()
 							.key("scriptId").value(url)
 							.key("lineNumber").value(lineNumber)
 							.key("columnNumber").value(0)
-						.endObject()
-					.endArray();
+						.endObject();
+					} else {
+						res.key("locations").array()
+							.object()
+								.key("scriptId").value(url)
+								.key("lineNumber").value(lineNumber)
+								.key("columnNumber").value(0)
+							.endObject()
+						.endArray();
+					}
+					
+					conn.send(res.endObject()
+						.endObject().toString());
 				}
-				
-				conn.send(res.endObject()
-					.endObject().toString());
-			}
-		});
+			});
+			
+		} else {
+			Log.i(TAG, "Setting breakpoint not available for file: " + url);
+			conn.send(new JSONStringer().object()
+					.key("id").value(id)
+					.key("error").object()
+						.key("code").value(-32000)
+						.key("message").value("Setting breakpoint not available - file is not instrumented")
+						.endObject()
+					.endObject().toString());			
+		}			
 	}
 	
 	/**
