@@ -19,6 +19,7 @@ import java.util.HashMap;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONStringer;
 import org.webbitserver.WebSocketConnection;
 
 
@@ -61,6 +62,49 @@ public class RuntimeMsgHandler extends AbstractMsgHandler {
 
 		} else {
 			super.onReceiveMessage(conn, method, message);
+		}
+	}
+
+	/* (non-Javadoc)
+	 * @see de.cyberflohrs.jshybugger.server.AbstractMsgHandler#onSendMessage(org.webbitserver.WebSocketConnection, java.lang.String, org.json.JSONObject)
+	 */
+	@Override
+	public void onSendMessage(WebSocketConnection conn, String method, JSONObject message)
+			throws JSONException {
+		
+		if ("GlobalInitHybugger".equals(method)) {
+			
+			sendExecutionContextCreated(conn, message);
+		} else {
+			super.onSendMessage(conn, method, message);
+		}
+	}	
+	
+	/**
+	 * Process "Page.loadEventFired" protocol messages.
+	 * Forwards the message to the debugger frontend. This message is triggered by loading the jsHybugger.js file. 
+	 *
+	 * @param conn the websocket connection
+	 * @param message the JSON message
+	 * @throws JSONException some JSON exception
+	 */
+	private void sendExecutionContextCreated(WebSocketConnection conn, JSONObject msg) throws JSONException {
+		
+		if (conn != null) {
+			
+//			{"method":"Runtime.executionContextCreated","params":{"context":{"id":4,"isPageContext":true,"name":"","frameId":"4990.1"}}}	
+			conn.send(new JSONStringer().object()
+					.key("method").value("Runtime.executionContextCreated")
+						.key("params").object()
+							.key("context").object()
+								.key("id").value(1)
+								.key("isPageContext").value(true)
+								.key("name").value("")
+					    		.key("frameId").value(msg.get("frameId"))
+					    	.endObject()
+						.endObject()
+					.endObject()
+				.toString());
 		}
 	}
 }
