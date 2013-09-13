@@ -1097,7 +1097,9 @@ window.JsHybugger = (function() {
 					}
 				}
 			} catch (ex) {
-				evalResult = ex.toString();
+				response.type = 'object';
+				response.description = ex instanceof Error ? ex.toString() : ex;
+				response.wasThrown = true;
 			}  
 
 			return { result : response };
