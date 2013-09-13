@@ -929,6 +929,12 @@ window.JsHybugger = (function() {
 						result.value.description = oVal.constructor &&
 								oVal.constructor.name ? oVal.constructor.name :
 								'object';
+						result.value.className = result.value.description;
+						
+						if (oVal instanceof Array)  {
+							result.value.description += "[" + oVal.length + "]";
+							result.value.subtype = 'array';
+						}
 					} else if (oType == 'function') {
 						fctnBody = oVal ? oVal.toString() : 'function anonymous()';
 						if (fctnBody) {
@@ -936,7 +942,12 @@ window.JsHybugger = (function() {
 						} 
 						result.value.description = fctnBody;
 					} else {
-						if (oType != 'undefined') {
+						if (oType === 'object') {
+							result.value.value = oVal;
+							if (!oVal) {
+								result.value.subtype="null";
+							}
+						} else if (oType != 'undefined') {
 							result.value.value = oVal;
 						}
 					}
