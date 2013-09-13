@@ -38,7 +38,7 @@
 	</dependencies>
 
 	<build>
-
+		<finalName>jshybuggerce-bundle-${project.version}</finalName>
 		<plugins>
 
 			<plugin>
