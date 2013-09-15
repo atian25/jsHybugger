@@ -1,0 +1,67 @@
+org.jshybugger.DebugContentProvider
+org.jshybugger.DebugContentProvider: java.lang.String X_JS_HYBUGGER_GET
+org.jshybugger.DebugContentProvider: java.lang.String INSTRUMENTED_FILE_APPENDIX
+org.jshybugger.DebugContentProvider: java.lang.String ORIGNAL_SELECTION
+org.jshybugger.DebugContentProvider: java.lang.String IS_CACHED_SELECTION
+org.jshybugger.DebugContentProvider: java.lang.String CACHE_DIR
+org.jshybugger.DebugContentProvider: java.lang.String CHANGED_CACHE_DIR
+org.jshybugger.DebugContentProvider: DebugContentProvider()
+org.jshybugger.DebugContentProvider: java.lang.String getProviderProtocol(android.content.Context)
+org.jshybugger.DebugContentProvider: android.os.ParcelFileDescriptor openFile(android.net.Uri,java.lang.String)
+org.jshybugger.DebugContentProvider: boolean onCreate()
+org.jshybugger.DebugContentProvider: int delete(android.net.Uri,java.lang.String,java.lang.String[])
+org.jshybugger.DebugContentProvider: java.lang.String getType(android.net.Uri)
+org.jshybugger.DebugContentProvider: android.net.Uri insert(android.net.Uri,android.content.ContentValues)
+org.jshybugger.DebugContentProvider: android.database.Cursor query(android.net.Uri,java.lang.String[],java.lang.String,java.lang.String[],java.lang.String)
+org.jshybugger.DebugContentProvider: int update(android.net.Uri,android.content.ContentValues,java.lang.String,java.lang.String[])
+org.jshybugger.proxy.DebugService
+org.jshybugger.proxy.DebugService: DebugService()
+org.jshybugger.proxy.DebugService: android.os.IBinder onBind(android.content.Intent)
+org.jshybugger.proxy.DebugService: void onCreate()
+org.jshybugger.proxy.DebugService: void onDestroy()
+org.jshybugger.proxy.DebugService: void onStart(android.content.Intent,int)
+org.jshybugger.proxy.DebugService: int onStartCommand(android.content.Intent,int,int)
+org.jshybugger.proxy.LogActivity
+org.jshybugger.proxy.LogActivity: LogActivity()
+org.jshybugger.proxy.LogActivity: boolean onCreateOptionsMenu(android.view.Menu)
+org.jshybugger.proxy.LogActivity: void addMessage(java.lang.String)
+org.jshybugger.proxy.ProxyService
+org.jshybugger.proxy.ProxyService: ProxyService()
+org.jshybugger.proxy.ProxyService: android.os.IBinder onBind(android.content.Intent)
+org.jshybugger.proxy.ProxyService: void onCreate()
+org.jshybugger.proxy.ProxyService: void onDestroy()
+org.jshybugger.proxy.ProxyService: void onStart(android.content.Intent,int)
+org.jshybugger.proxy.ProxyService: int onStartCommand(android.content.Intent,int,int)
+org.jshybugger.proxy.ProxyService: boolean isRunning()
+org.jshybugger.proxy.StartActivity
+org.jshybugger.proxy.StartActivity: StartActivity()
+org.jshybugger.proxy.StartActivity: void onCreate(android.os.Bundle)
+org.mozilla.javascript.VMBridge
+org.mozilla.javascript.VMBridge: org.mozilla.javascript.VMBridge instance
+org.mozilla.javascript.VMBridge: VMBridge()
+org.mozilla.javascript.VMBridge: org.mozilla.javascript.VMBridge makeInstance()
+org.mozilla.javascript.VMBridge: java.lang.Object getThreadContextHelper()
+org.mozilla.javascript.VMBridge: org.mozilla.javascript.Context getContext(java.lang.Object)
+org.mozilla.javascript.VMBridge: void setContext(java.lang.Object,org.mozilla.javascript.Context)
+org.mozilla.javascript.VMBridge: java.lang.ClassLoader getCurrentThreadClassLoader()
+org.mozilla.javascript.VMBridge: boolean tryToMakeAccessible(java.lang.Object)
+org.mozilla.javascript.VMBridge: java.lang.Object getInterfaceProxyHelper(org.mozilla.javascript.ContextFactory,java.lang.Class[])
+org.mozilla.javascript.VMBridge: java.lang.Object newInterfaceProxy(java.lang.Object,org.mozilla.javascript.ContextFactory,org.mozilla.javascript.InterfaceAdapter,java.lang.Object,org.mozilla.javascript.Scriptable)
+org.mozilla.javascript.VMBridge: boolean isVarArgs(java.lang.reflect.Member)
+org.mozilla.javascript.VMBridge: java.util.Iterator getJavaIterator(org.mozilla.javascript.Context,org.mozilla.javascript.Scriptable,java.lang.Object)
+org.mozilla.javascript.VMBridge: void <clinit>()
+org.mozilla.javascript.jdk13.VMBridge_jdk13
+org.mozilla.javascript.jdk13.VMBridge_jdk13: java.lang.ThreadLocal contextLocal
+org.mozilla.javascript.jdk13.VMBridge_jdk13: VMBridge_jdk13()
+org.mozilla.javascript.jdk13.VMBridge_jdk13: java.lang.Object getThreadContextHelper()
+org.mozilla.javascript.jdk13.VMBridge_jdk13: org.mozilla.javascript.Context getContext(java.lang.Object)
+org.mozilla.javascript.jdk13.VMBridge_jdk13: void setContext(java.lang.Object,org.mozilla.javascript.Context)
+org.mozilla.javascript.jdk13.VMBridge_jdk13: java.lang.ClassLoader getCurrentThreadClassLoader()
+org.mozilla.javascript.jdk13.VMBridge_jdk13: boolean tryToMakeAccessible(java.lang.Object)
+org.mozilla.javascript.jdk13.VMBridge_jdk13: java.lang.Object getInterfaceProxyHelper(org.mozilla.javascript.ContextFactory,java.lang.Class[])
+org.mozilla.javascript.jdk13.VMBridge_jdk13: java.lang.Object newInterfaceProxy(java.lang.Object,org.mozilla.javascript.ContextFactory,org.mozilla.javascript.InterfaceAdapter,java.lang.Object,org.mozilla.javascript.Scriptable)
+org.mozilla.javascript.jdk13.VMBridge_jdk13: boolean isVarArgs(java.lang.reflect.Member)
+org.mozilla.javascript.jdk15.VMBridge_jdk15
+org.mozilla.javascript.jdk15.VMBridge_jdk15: VMBridge_jdk15()
+org.mozilla.javascript.jdk15.VMBridge_jdk15: boolean isVarArgs(java.lang.reflect.Member)
+org.mozilla.javascript.jdk15.VMBridge_jdk15: java.util.Iterator getJavaIterator(org.mozilla.javascript.Context,org.mozilla.javascript.Scriptable,java.lang.Object)

@@ -13,3 +13,4 @@ jshybugger-proxy/gen/
 examples/simplenote/
 third_party/
 jshybugger-proxy/keystore
+jshybugger-proxy/proguard/dump.txt
