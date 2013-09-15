@@ -1076,7 +1076,7 @@ window.JsHybugger = (function() {
 						stack.expr[exprID] = evalResult ;
 
 						response.objectId = "stack:" + stack.depth + ":expr." + exprID;
-						if (response.type == 'object') {
+						if (evalResult && response.type == 'object') {
 							response.description = evalResult.constructor ? evalResult.constructor.name : 'object';
 						} else {
 							response.description = "" + evalResult;
@@ -1090,7 +1090,7 @@ window.JsHybugger = (function() {
 					} else {
 
 						response.objectId = Runtime.createObjectId(objectGroup, evalResult);
-						if (response.type == 'object') {
+						if (evalResult && response.type == 'object') {
 							response.description = evalResult.constructor ? evalResult.constructor.name : 'object';
 						} else {
 							response.description = "" + evalResult;
