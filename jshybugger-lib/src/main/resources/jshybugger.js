@@ -41,6 +41,7 @@ window.JsHybugger = (function() {
 		pauseOnExceptionsState = 'none',
 		FRAME_ID = String(new Date().getTime() % 3600000),
 		PROTOCOL = 'content://jsHybugger.org/',
+		ORIGIN = location.origin || (location.protocol + "//" + location.host),
 		localConsole = {},
 		clientConnected=false,
 		url = JsHybuggerConfig.endpoint;
@@ -578,7 +579,7 @@ window.JsHybugger = (function() {
 	 */
 	function initHybugger() {
 		replaceConsole();
-		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, title : document.title || 'untitled', url : location.href, securityOrigin : location.origin || (location.protocol + "//" + location.host)  });
+		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, title : document.title || 'untitled', url : location.href, securityOrigin : ORIGIN });
 		
 		if (JsHybuggerNI['usePushChannel']) {
 			openPushChannel();
@@ -1144,7 +1145,7 @@ window.JsHybugger = (function() {
 							id : FRAME_ID,
 							url : document.location.href.indexOf(PROTOCOL) === 0 ? document.location.href.substr(PROTOCOL.length) : document.location.href,
 							loaderId: FRAME_ID,
-							securityOrigin : location.origin || (location.protocol + "//" + location.host),
+							securityOrigin : ORIGIN,
 							mimeType : 'text/html'
 						},
 						resources : []
