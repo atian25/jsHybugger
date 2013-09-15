@@ -578,7 +578,7 @@ window.JsHybugger = (function() {
 	 */
 	function initHybugger() {
 		replaceConsole();
-		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, title : document.title || 'untitled', url : location.href, securityOrigin : location.origin  });
+		sendToDebugService('GlobalInitHybugger', { frameId : FRAME_ID, title : document.title || 'untitled', url : location.href, securityOrigin : location.origin || (location.protocol + "//" + location.host)  });
 		
 		if (JsHybuggerNI['usePushChannel']) {
 			openPushChannel();
@@ -1062,7 +1062,7 @@ window.JsHybugger = (function() {
 				exprID;
 
 			try {
-				evalResult = stack && stack.evalScope ? stack.evalScope.call(stack.that, params.expression) : eval.call(document, params.expression);
+				evalResult = stack && stack.evalScope ? stack.evalScope.call(stack.that, params.expression) : eval.call(window, params.expression);
 				if (stack) {
 
 					response.type = typeof(evalResult);
@@ -1144,7 +1144,7 @@ window.JsHybugger = (function() {
 							id : FRAME_ID,
 							url : document.location.href.indexOf(PROTOCOL) === 0 ? document.location.href.substr(PROTOCOL.length) : document.location.href,
 							loaderId: FRAME_ID,
-							securityOrigin : document.location.origin,
+							securityOrigin : location.origin || (location.protocol + "//" + location.host),
 							mimeType : 'text/html'
 						},
 						resources : []
