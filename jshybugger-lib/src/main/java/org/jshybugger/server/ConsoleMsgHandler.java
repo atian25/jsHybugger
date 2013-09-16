@@ -68,6 +68,11 @@ public class ConsoleMsgHandler extends AbstractMsgHandler {
 		} else if ("addInspectedNode".equals(method)) {
 			sendAckMessage(conn, message);
 			
+		} else if (method.equals("clearMessages")) {
+			
+			storedMessages.clear();
+			sendAckMessage(conn, message);
+			
 		} else {
 			super.onReceiveMessage(conn, method, message);
 		}
