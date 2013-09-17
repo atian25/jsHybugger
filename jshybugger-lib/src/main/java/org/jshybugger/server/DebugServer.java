@@ -155,11 +155,9 @@ public class DebugServer {
 					for (DebugSession dbgSession : debugSessions.values()) {
 						
 						res.object()
-							.key("id").value(dbgSession.getSessionId())
 							.key("devtoolsFrontendUrl").value(String.format(CHROME_DEVTOOLS_FRONTEND, host != null ? host : "//" , dbgSession.getSessionId()))
 							.key("faviconUrl").value("http://www.jshybugger.org/favicon.ico")
 						    .key("thumbnailUrl").value("http://www.jshybugger.org/favicon.ico")
-						    .key("type").value("page")
 						    .key("url").value(dbgSession.getUrl());
 						
 						if (!dbgSession.isConnected()) {
