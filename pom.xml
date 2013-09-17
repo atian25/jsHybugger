@@ -28,7 +28,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>	
         <platform.version>17</platform.version>
 		<server_schema>http</server_schema>
-		<global.version>2.0.0</global.version>
+		<global.version>2.0.1</global.version>
 	</properties>
 
 	<modules>

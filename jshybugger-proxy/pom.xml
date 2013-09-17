@@ -31,7 +31,7 @@
 
 	<properties>
 		<environment>development</environment>
-		<versionCode>14</versionCode>
+		<versionCode>15</versionCode>
 	</properties>
 
 	<profiles>
