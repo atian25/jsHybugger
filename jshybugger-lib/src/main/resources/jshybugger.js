@@ -370,10 +370,14 @@ window.JsHybugger = (function() {
 
 				case 'ClientConnected':
 					clientConnected = true;
+					sendToDebugService('GlobalClientConnected', {});
+					
 					return true;
 
 				case 'ClientDisconnected':
 					clientConnected=false;
+					sendToDebugService('GlobalClientDisconnected', {});
+
 					return false;   // return false to ensure termination of messaging loop for debugger 
 
 				default:

@@ -191,6 +191,10 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 				
 			sendGlobalObjectCleared(conn);
 			
+		} else if (method.equals("GlobalClientDisconnected")) {
+			
+			scriptBreakpoints.clear();
+			
 		} else {
 			super.onSendMessage(conn, method, message);
 		}
@@ -365,38 +369,6 @@ public class DebuggerMsgHandler extends AbstractMsgHandler {
 					.endObject()
 				.endObject().toString());
 		}
-		
-		
-		Set<Breakpoint> breakpoints = scriptBreakpoints.get(url);
-		if (breakpoints != null) {
-			if (conn != null) {
-				for (Breakpoint breakpoint : breakpoints) {
-					JSONObject params = new JSONObject();
-					params.put("condition", breakpoint.condition);
-					params.put("lineNumber", breakpoint.line);
-					params.put("url", url);
-					
-					debugSession.getBrowserInterface().sendMsgToWebView(
-							"Debugger.setBreakpointByUrl",
-							new JSONObject().put("params", params), null);
-					
-					Log.d(TAG, "breakpointResolved: " + breakpoint);
-
-					conn.send(new JSONStringer().object()
-						.key("method").value("Debugger.breakpointResolved")
-						.key("params").object()
-								.key("breakpointId").value(breakpoint.getBreakpointId())
-								.key("location").object()
-									.key("scriptId").value(url)
-									.key("lineNumber").value(breakpoint.line)
-									.key("columnNumber").value(0)
-								.endObject()
-							.endObject()
-						.endObject().toString());
-				}
-			}
-		}
-	
 	}
 	
 	static class Breakpoint {

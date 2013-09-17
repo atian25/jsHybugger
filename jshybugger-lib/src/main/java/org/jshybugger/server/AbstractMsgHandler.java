@@ -40,6 +40,8 @@ abstract public class AbstractMsgHandler implements MessageHandler {
 	static {
 		INTERNAL_MESSAGES.add("GlobalInitHybugger");
 		INTERNAL_MESSAGES.add("GlobalPageLoaded");
+		INTERNAL_MESSAGES.add("GlobalClientConnected");
+		INTERNAL_MESSAGES.add("GlobalClientDisconnected");
 	}
 	
 	/**
