@@ -376,6 +376,12 @@ window.JsHybugger = (function() {
 
 				case 'ClientDisconnected':
 					clientConnected=false;
+					
+					// reset all debugger breakpoints
+					breakpoints = {};
+					breakpointsById = {};
+					shouldBreak = function() { return false; };
+					
 					sendToDebugService('GlobalClientDisconnected', {});
 
 					return false;   // return false to ensure termination of messaging loop for debugger 
