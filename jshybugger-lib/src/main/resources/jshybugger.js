@@ -370,7 +370,6 @@ window.JsHybugger = (function() {
 
 				case 'ClientConnected':
 					clientConnected = true;
-					sendToDebugService('GlobalClientConnected', {});
 					
 					return true;
 
@@ -382,8 +381,6 @@ window.JsHybugger = (function() {
 					breakpointsById = {};
 					shouldBreak = function() { return false; };
 					
-					sendToDebugService('GlobalClientDisconnected', {});
-
 					return false;   // return false to ensure termination of messaging loop for debugger 
 
 				default:
@@ -1188,6 +1185,7 @@ window.JsHybugger = (function() {
 		pageReload : function(params) {
 			shouldBreak = function() { return false; };
 			breakpoints = {};
+			breakpointsById = {};
 		
 			setTimeout(function() {
 				location.reload();

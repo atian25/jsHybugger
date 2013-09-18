@@ -139,6 +139,12 @@ public class DebugSession extends BaseWebSocketHandler {
 		connections.add(conn);
 
 		try {
+			sendMessage("GlobalClientConnected", null);
+		} catch (JSONException e) {
+			Log.e(TAG, "Notify GlobalClientConnected failed", e);
+		}
+
+		try {
 			getBrowserInterface().sendMsgToWebView(
 						"ClientConnected",
 						new JSONObject(),
@@ -156,6 +162,13 @@ public class DebugSession extends BaseWebSocketHandler {
 	public void onClose( WebSocketConnection conn) {
 		Log.d(TAG, conn + " has left the debugger space!" );
 		connections.remove(conn);
+		
+		try {
+			sendMessage("GlobalClientDisconnected", null);
+		} catch (JSONException e) {
+			Log.e(TAG, "Notify GlobalClientDisconnected failed", e);
+		}
+		
 		try {
 			getBrowserInterface().sendMsgToWebView(
 						"ClientDisconnected",
